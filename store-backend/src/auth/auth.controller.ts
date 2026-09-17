@@ -1,0 +1,76 @@
+import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBadRequestResponse,
+  ApiTooManyRequestsResponse,
+  ApiOkResponse,
+} from '@nestjs/swagger';
+
+import { AuthService } from './auth.service';
+import { SendOtpDto } from './dto/send-otp.dto';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { Auth } from './decorators/auth.decorator';
+import { AuthType } from './enums/auth-type.enum';
+
+@ApiTags('احراز هویت (Authentication)')
+@Controller('auth')
+export class AuthController {
+  constructor(private readonly authService: AuthService) {}
+
+  @Auth(AuthType.None)
+  @Post('send-otp')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'ارسال کد یکبار مصرف (OTP)',
+    description:
+      'یک کد تایید ۵ یا ۶ رقمی به شماره موبایل ارسال می‌کند. در صورت عدم وجود کاربر، کاربر جدید ثبت اولیه می‌شود.',
+  })
+  @ApiOkResponse({
+    description: 'کد تایید با موفقیت ارسال شد.',
+    schema: {
+      example: {
+        message: 'کد تایید ارسال شد.',
+        expiresIn: 120, // ثانیه
+      },
+    },
+  })
+  @ApiBadRequestResponse({
+    description: 'فرمت شماره موبایل نامعتبر است.',
+  })
+  @ApiTooManyRequestsResponse({
+    description: 'تعداد درخواست‌ها بیش از حد مجاز است. لطفاً ۲ دقیقه صبر کنید.',
+  })
+  async sendOtp(@Body() dto: SendOtpDto) {
+    return this.authService.requestOtp(dto.phoneNumber);
+  }
+
+  @Auth(AuthType.None)
+  @Post('verify-otp')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'بررسی کد تایید و ورود / ثبت‌نام',
+    description:
+      'کد ارسالی را اعتبارسنجی کرده و توکن‌های دسترسی (Access Token و Refresh Token) را برمی‌گرداند.',
+  })
+  @ApiOkResponse({
+    description: 'ورود موفقیت‌آمیز بود و توکن‌ها صادر شدند.',
+    schema: {
+      example: {
+        accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        refreshToken: 'dGhpc2lzYXJlZnJlc2h0b2tlbg...',
+        user: {
+          id: '64e8b3b4f9a1b2c3d4e5f6a7',
+          phoneNumber: '09123456789',
+          name: 'سمیرا',
+        },
+      },
+    },
+  })
+  @ApiBadRequestResponse({
+    description: 'کد تایید وارد شده اشتباه یا منقضی شده است.',
+  })
+  async verifyOtp(@Body() dto: VerifyOtpDto) {
+    return this.authService.verifyOtp(dto.phoneNumber, dto.code);
+  }
+}

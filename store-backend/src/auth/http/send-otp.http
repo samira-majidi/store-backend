@@ -1,0 +1,6 @@
+POST http://localhost:8080/auth/send-otp
+Content-Type: application/json
+
+{
+  "phoneNumber": "09180640070"
+}
