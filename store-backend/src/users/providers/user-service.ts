@@ -107,4 +107,24 @@ export class UserService {
       throw new InternalServerErrorException('خطایی در جستجوی کاربر رخ داد.');
     }
   }
+  public async findAllUsers(): Promise<User[]> {
+    this.logger.log('Admin is fetching all users list...');
+
+    try {
+      const users = await this.userRepository.find({
+        order: {
+          id: 'DESC',
+        },
+      });
+
+      this.logger.debug(`Found ${users.length} users successfully.`);
+      return users;
+    } catch (error: unknown) {
+      const err = error as Error;
+      this.logger.error('Error fetching all users list', err.stack);
+      throw new InternalServerErrorException(
+        'خطایی در دریافت لیست کاربران رخ داد.',
+      );
+    }
+  }
 }

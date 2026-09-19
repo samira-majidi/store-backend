@@ -1,7 +1,16 @@
-POST http://localhost:8080/auth/verify-otp
+@baseUrl = http://localhost:8080
+
+### 1. لاگین و دریافت توکن
+# @name login
+POST {{baseUrl}}/auth/verify-otp
 Content-Type: application/json
 
 {
-  "phoneNumber": "09180640070",
-  "code": "96698"
+  "phoneNumber": "-----",
+  "code": "85145"
 }
+
+### 2. یک روت ادمین (محافظت‌شده)
+# @ref login
+GET {{baseUrl}}/admin/users
+Authorization: Bearer {{login.accessToken}}

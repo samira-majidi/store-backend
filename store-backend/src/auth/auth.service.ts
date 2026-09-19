@@ -1,16 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { UserService } from '#src/users/providers/user-service';
-import { CreateUserDto } from '#src/users/dtos/create-user.dto';
+
 import { UserRole } from '#src/users/dtos/user-role.enum';
 import { GenerateTokenProviders } from './providers/generate-token.providers';
 import { OtpService } from './providers/otpService';
 import { SmsService } from './providers/sms.service';
+import { RefreshTokenProvider } from './providers/refresh-token.provider';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly usersService: UserService,
     private readonly generateTokenProviders: GenerateTokenProviders,
+    private readonly refreshTokenProvider: RefreshTokenProvider,
     private readonly otpService: OtpService,
     private readonly smsService: SmsService,
   ) {}
@@ -38,7 +40,8 @@ export class AuthService {
       user = await this.usersService.createUser({ phoneNumber }, UserRole.USER);
     }
 
-    const tokens = await this.generateTokenProviders.generateToken(user);
+    const { accessToken, refreshToken } =
+      await this.generateTokenProviders.generateToken(user);
 
     const isProfileComplete = Boolean(user.name && user.lastName);
 
@@ -49,12 +52,8 @@ export class AuthService {
         role: user.role,
         isProfileComplete,
       },
-      ...tokens,
+      accessToken,
+      refreshToken,
     };
-  }
-
-  public async createAdmin(dto: CreateUserDto) {
-    const newAdmin = await this.usersService.createUser(dto, UserRole.ADMIN);
-    return newAdmin;
   }
 }

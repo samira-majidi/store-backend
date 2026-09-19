@@ -1,5 +1,10 @@
-import { forwardRef, Inject, Injectable } from '@nestjs/common';
-import { RefreshToken } from '../dto/refresh-token.dto';
+// src/auth/providers/refresh-token.provider.ts
+import {
+  forwardRef,
+  Inject,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import * as config from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 
@@ -18,17 +23,32 @@ export class RefreshTokenProvider {
     @Inject(jwtConfig.KEY)
     private readonly jwtConfiguration: config.ConfigType<typeof jwtConfig>,
   ) {}
-  public async refreshToken(refreshtokenDto: RefreshToken) {
-    const { sub } = await this.jwtService.verifyAsync<
-      Pick<ActiveUserData, 'sub'>
-    >(refreshtokenDto.refreshToken, {
-      secret: this.jwtConfiguration.secret,
-      audience: this.jwtConfiguration.audience,
-      issuer: this.jwtConfiguration.issuer,
-    });
 
-    const user = await this.usersService.findUserById(sub);
+  /**
+   * متد تمدید توکن - ورودی را مستقیماً به عنوان رشته از کوکی می‌گیرد
+   */
+  public async refreshToken(refreshToken: string) {
+    if (!refreshToken) {
+      throw new UnauthorizedException('رفرش توکن یافت نشد.');
+    }
 
-    return await this.generateTokenProvider.generateToken(user);
+    try {
+      const { sub } = await this.jwtService.verifyAsync<
+        Pick<ActiveUserData, 'sub'>
+      >(refreshToken, {
+        secret: this.jwtConfiguration.secret,
+        audience: this.jwtConfiguration.audience,
+        issuer: this.jwtConfiguration.issuer,
+      });
+
+      const user = await this.usersService.findUserById(sub);
+      if (!user) {
+        throw new UnauthorizedException('کاربر مورد نظر یافت نشد.');
+      }
+
+      return await this.generateTokenProvider.generateToken(user);
+    } catch {
+      throw new UnauthorizedException('رفرش توکن نامعتبر یا منقضی شده است.');
+    }
   }
 }
