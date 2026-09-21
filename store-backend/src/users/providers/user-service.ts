@@ -12,6 +12,7 @@ import { CreateUserDto } from '../dtos/create-user.dto';
 import { UserRole } from '../dtos/user-role.enum';
 import { User } from '../entity/user.entity';
 import { CreateUserProvider } from './create-user.provider';
+import { CompleteProfileDto } from '../dtos/complete-profile.dto';
 
 @Injectable()
 export class UserService {
@@ -124,6 +125,32 @@ export class UserService {
       this.logger.error('Error fetching all users list', err.stack);
       throw new InternalServerErrorException(
         'خطایی در دریافت لیست کاربران رخ داد.',
+      );
+    }
+  }
+
+  public async updateProfile(
+    id: number,
+    updateDto: CompleteProfileDto,
+  ): Promise<User> {
+    this.logger.log(`Updating profile for user ID: ${id}`);
+
+    const user = await this.findUserById(id);
+
+    user.name = updateDto.name;
+    user.lastName = updateDto.lastName;
+
+    try {
+      const updatedUser = await this.userRepository.save(user);
+      this.logger.debug(`User profile updated successfully for ID: ${id}`);
+      return updatedUser;
+    } catch (error) {
+      this.logger.error(
+        `Error updating profile for user ID: ${id}`,
+        (error as Error).stack,
+      );
+      throw new InternalServerErrorException(
+        'خطایی در به‌روزرسانی پروفایل رخ داد.',
       );
     }
   }

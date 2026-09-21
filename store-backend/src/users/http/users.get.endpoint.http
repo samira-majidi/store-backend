@@ -2,6 +2,7 @@
 # @import ../../auth/http/verify-otp.http
 
 @baseUrl = http://localhost:8080
+
 ### 2. Get All Users (با توکن)
 # @ref login
 GET {{baseUrl}}/users
@@ -10,6 +11,8 @@ Authorization: Bearer {{login.accessToken}}
 ###
 
 ### 2. Get User By ID
-# @name getUserById
-GET {{baseUrl}}/users/1
+# @ref login
+
+GET {{baseUrl}}/users/my-profile
 Content-Type: application/json
+Authorization: Bearer {{login.accessToken}}

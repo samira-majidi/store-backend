@@ -1,0 +1,10 @@
+# @import ../../auth/http/verify-otp.http
+### 3. روت تکمیل پروفایل کاربر
+# @ref login
+PATCH {{baseUrl}}/users/profile
+Content-Type: application/json
+Authorization: Bearer {{login.accessToken}}
+{
+  "name": "سمیرا",
+  "lastName": "مجیدی"
+}

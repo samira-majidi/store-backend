@@ -1,24 +1,26 @@
 import {
   Controller,
   Get,
-  Param,
-  ParseIntPipe,
   HttpStatus,
   HttpCode,
+  Body,
+  Patch,
 } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
-  ApiParam,
   ApiInternalServerErrorResponse,
-  ApiNotFoundResponse,
   ApiOkResponse,
+  ApiBadRequestResponse,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 
 import { User } from './entity/user.entity';
 import { UserService } from './providers/user-service';
 import { Permission } from '#src/rbac/enums/permission.enum';
 import { Permissions } from '#src/rbac/decorators/permissions.decorator';
+import { ActiveUser } from '#src/auth/decorators/active-user.decorator';
+import { CompleteProfileDto } from './dtos/complete-profile.dto';
 
 @ApiTags('Users')
 @Controller('users')
@@ -42,36 +44,39 @@ export class UserController {
   public async getAllUsers(): Promise<User[]> {
     return await this.userService.findAllUsers();
   }
-
-  /**
-   * روت دریافت یک کاربر با شناسه
-   */
-  @Get(':id')
+  @Patch('profile')
   @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth() // این دکوراتور برای Swagger الزامیه تا بدونه این روت توکن می‌خواد
   @ApiOperation({
-    summary: 'دریافت اطلاعات یک کاربر با شناسه (ID)',
+    summary: 'تکمیل یا ویرایش پروفایل کاربر',
     description:
-      'مشخصات کامل یک کاربر بر اساس شناسه دیتابیسی او برگردانده می‌شود.',
-  })
-  @ApiParam({
-    name: 'id',
-    type: Number,
-    example: 1,
-    description: 'شناسه عددی کاربر در دیتابیس',
+      'کاربر پس از ثبت‌نام اولیه، اطلاعات تکمیلی خود (نام و نام خانوادگی) را از طریق این روت ارسال می‌کند.',
   })
   @ApiOkResponse({
-    description: 'اطلاعات کاربر با موفقیت پیدا شد.',
+    description: 'پروفایل کاربر با موفقیت بروزرسانی شد.',
+  })
+  @ApiBadRequestResponse({
+    description: 'داده‌های ارسالی نامعتبر است (خطای ولیدیشن DTO).',
+  })
+  public async updateProfile(
+    @ActiveUser('sub') userId: number,
+    @Body() updateProfileDto: CompleteProfileDto,
+  ) {
+    return await this.userService.updateProfile(userId, updateProfileDto);
+  }
+  @Get('my-profile')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'دریافت پروفایل کاربری خودم',
+    description:
+      'اطلاعات پروفایل کاربری که لاگین کرده را بر اساس توکن برمی‌گرداند.',
+  })
+  @ApiOkResponse({
+    description: 'اطلاعات پروفایل شما با موفقیت پیدا شد.',
     type: User,
   })
-  @ApiNotFoundResponse({
-    description: 'کاربری با شناسه ارسال‌شده یافت نشد.',
-  })
-  @ApiInternalServerErrorResponse({
-    description: 'خطای داخلی سرور در دریافت مشخصات کاربر.',
-  })
-  public async getUserById(
-    @Param('id', ParseIntPipe) id: number,
-  ): Promise<User> {
-    return await this.userService.findUserById(id);
+  public async getMyProfile(@ActiveUser('sub') userId: number): Promise<User> {
+    return await this.userService.findUserById(userId);
   }
 }

@@ -3,5 +3,5 @@ POST http://localhost:8080/auth/send-otp
 Content-Type: application/json
 
 {
-  "phoneNumber": "09188737488"
+  "phoneNumber": "09180640070"
 }

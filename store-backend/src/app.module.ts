@@ -15,6 +15,8 @@ import { APP_GUARD } from '@nestjs/core';
 import { AccessTokenGuard } from './auth/guards/access-token/access-token.guard';
 import { AuthModule } from './auth/auth.module';
 import { AuthenticationGuard } from './auth/guards/authentication/authentication.guard';
+import { PermissionGuard } from './rbac/guards/permission.guard';
+import { CategoriesModule } from './categories/categories.module';
 
 @Module({
   imports: [
@@ -25,7 +27,7 @@ import { AuthenticationGuard } from './auth/guards/authentication/authentication
         `.env.${process.env.NODE_ENV || 'development'}`,
         '.env',
       ],
-      load: [appConfig, databaseConfig, redisConfig],
+      load: [appConfig, databaseConfig, redisConfig, jwtConfig],
     }),
     ScheduleModule.forRoot(),
     TypeOrmModule.forRootAsync({
@@ -46,6 +48,7 @@ import { AuthenticationGuard } from './auth/guards/authentication/authentication
     JwtModule.registerAsync(jwtConfig.asProvider()),
     RedisModule,
     AuthModule,
+    CategoriesModule,
   ],
   controllers: [AppController],
   providers: [
@@ -53,6 +56,10 @@ import { AuthenticationGuard } from './auth/guards/authentication/authentication
     {
       provide: APP_GUARD,
       useClass: AuthenticationGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: PermissionGuard,
     },
     AccessTokenGuard,
   ],

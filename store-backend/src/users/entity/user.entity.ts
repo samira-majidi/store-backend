@@ -11,14 +11,14 @@ export class User {
     length: 100,
     nullable: true,
   })
-  name: string;
+  name?: string;
 
   @Column({
     type: 'varchar',
     length: 100,
     nullable: true,
   })
-  lastName: string;
+  lastName?: string;
 
   @Column({
     type: 'varchar',

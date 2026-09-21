@@ -12,10 +12,9 @@ import { Role } from '../enums/role.enum';
 import { RolePermissions } from '../mapping/role-permission.map';
 import { REQUEST_USER_KEY } from '#src/auth/constants/auth-constant';
 import { PERMISSIONS_KEY } from '../constants/permission-constant';
-// 👇 ایمپورت اینترفیس خودت
+
 import { ActiveUserData } from '#src/auth/interfaces/active-user.interface';
 
-// تایپ اختصاصی ریکوئست بر پایه اینترفیس خودت
 interface AuthenticatedRequest extends Request {
   [REQUEST_USER_KEY]?: ActiveUserData;
 }
@@ -25,18 +24,15 @@ export class PermissionGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    // ۱. بررسی دسترسی‌های تعیین‌شده روی متد یا کنترلر
     const requiredPermissions = this.reflector.getAllAndOverride<Permission[]>(
       PERMISSIONS_KEY,
       [context.getHandler(), context.getClass()],
     );
 
-    // اگر هیچ دسترسی خاصی مشخص نشده بود، عبور آزاد است
     if (!requiredPermissions || requiredPermissions.length === 0) {
       return true;
     }
 
-    // ۲. گرفتن ریکوئست با تایپ ایمن
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const user = request[REQUEST_USER_KEY];
 

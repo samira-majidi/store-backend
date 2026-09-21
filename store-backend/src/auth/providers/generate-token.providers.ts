@@ -39,7 +39,6 @@ export class GenerateTokenProviders {
         {
           phoneNumber: user.phoneNumber,
           role: user.role,
-          name: user.name,
         },
       ),
 

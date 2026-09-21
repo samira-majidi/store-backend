@@ -1,0 +1,65 @@
+# @import ../auth/http/verify-otp.http
+
+@baseUrl = http://localhost:8080
+
+### ─── CREATE ─────────────────────────────────────
+# @ref login
+# @name createCategory
+POST {{baseUrl}}/categories
+Content-Type: application/json
+Authorization: Bearer {{login.accessToken}}
+{
+  "name": "فشارسنج دیجیتال بازویی",
+  "slug": "digital-arm-blood-pressure",
+  "parentId": 1,
+  "sortOrder": 1,
+  "description": "فشارسنج‌های هوشمند و دیجیتالی بازویی با حافظه ذخیره‌سازی",
+  "metaTitle": "خرید فشارسنج دیجیتال بازویی اصل | آریامدیک",
+  "metaDescription": "لیست قیمت جدیدترین فشارسنج‌های بازویی دیجیتال",
+  "isActive": true
+}
+
+### ─── LIST ALL ────────────────────────────────────
+# @ref login
+GET {{baseUrl}}/categories
+Authorization: Bearer {{login.accessToken}}
+
+### ─── FIND BY ID ─────────────────────────────────
+# @ref login
+GET {{baseUrl}}/categories/1
+Authorization: Bearer {{login.accessToken}}
+
+### ─── FIND BY SLUG ───────────────────────────────
+# @ref login
+GET {{baseUrl}}/categories/by-slug/general-medical-equipment
+Authorization: Bearer {{login.accessToken}}
+
+### ─── SUBTREE ─────────────────────────────────────
+# @ref login
+GET {{baseUrl}}/categories/1/subtree
+Authorization: Bearer {{login.accessToken}}
+
+### ─── BREADCRUMBS ────────────────────────────────
+# @ref login
+GET {{baseUrl}}/categories/1/breadcrumbs
+Authorization: Bearer {{login.accessToken}}
+
+### ─── UPDATE ─────────────────────────────────────
+# @ref login
+PATCH {{baseUrl}}/categories/3
+Content-Type: application/json
+Authorization: Bearer {{login.accessToken}}
+
+{
+  "name": "فشارسنج دیجیتال بازو"
+}
+
+### ─── DELETE ─────────────────────────────────────
+# @ref login
+DELETE {{baseUrl}}/categories/7
+Authorization: Bearer {{login.accessToken}}
+
+### ─── REBUILD PATHS (Admin) ──────────────────────
+# @ref login
+POST {{baseUrl}}/categories/admin/rebuild-paths
+Authorization: Bearer {{login.accessToken}}
