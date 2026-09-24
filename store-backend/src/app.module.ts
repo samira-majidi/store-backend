@@ -17,6 +17,8 @@ import { AuthModule } from './auth/auth.module';
 import { AuthenticationGuard } from './auth/guards/authentication/authentication.guard';
 import { PermissionGuard } from './rbac/guards/permission.guard';
 import { CategoriesModule } from './categories/categories.module';
+import { UploadModule } from './common/upload/upload.module';
+import { ProductsModule } from './product/products.module';
 
 @Module({
   imports: [
@@ -49,6 +51,8 @@ import { CategoriesModule } from './categories/categories.module';
     RedisModule,
     AuthModule,
     CategoriesModule,
+    UploadModule,
+    ProductsModule,
   ],
   controllers: [AppController],
   providers: [

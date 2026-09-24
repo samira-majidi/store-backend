@@ -6,8 +6,8 @@ POST {{baseUrl}}/auth/verify-otp
 Content-Type: application/json
 
 {
-  "phoneNumber": "09180640070",
-  "code": "79895"
+  "phoneNumber": "09188737488",
+  "code": "51180"
 }
 
 ### 2. یک روت ادمین (محافظت‌شده)

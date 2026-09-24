@@ -1,0 +1,16 @@
+# @import ../../../auth/http/verify-otp.http
+
+@baseUrl = http://localhost:8080
+
+### آپلود فایل با توکن لاگین
+# @ref login
+POST {{baseUrl}}/uploads/file
+Authorization: Bearer {{login.accessToken}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="1696943917924-Untitled-1.webp"
+Content-Type: image/webp
+
+< ./1696943917924-Untitled-1.webp
+------WebKitFormBoundary7MA4YWxkTrZu0gW--

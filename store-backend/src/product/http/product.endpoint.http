@@ -1,0 +1,47 @@
+# @import ../../auth/http/verify-otp.http
+
+@baseUrl = http://localhost:8080
+
+### ایجاد محصول جدید با تنوع‌ها (Variants)
+# @ref login
+POST {{baseUrl}}/products
+Content-Type: application/json
+Authorization: Bearer {{login.accessToken}}
+
+{
+  "title": "فشارسنج دیجیتال بازویی امرن مدل M3",
+  "slug": "omron-m3-digital-blood-pressure",
+  "mainImageId": 3,
+  "categoryId": 7, 
+  "galleryImageIds": [],
+  "shortDescription": "فشارسنج دقیق و قابل اعتماد برای مصارف خانگی با قابلیت تشخیص آریتمی قلب.",
+  "longDescription": "<p>فشارسنج دیجیتال بازویی امرن (Omron) مدل M3 یکی از پرفروش‌ترین تجهیزات پزشکی خانگی است...</p>",
+  "isSpecial": true,
+  "features": [
+    "برند: امرن (Omron)",
+    "کشور سازنده: ویتنام (تحت لیسانس ژاپن)",
+    "نوع: دیجیتال بازویی"
+  ],
+  "variants": [
+    {
+      "sku": "OM-M3-WHT",
+      "color": "سفید",
+      "price": 2800000,
+      "discountPercentage": 5, 
+      "stock": 15,
+      "isDefault": true
+    },
+    {
+      "sku": "OM-M3-BLK",
+      "color": "مشکی",
+      "price": 2850000,
+      "stock": 5,
+      "isDefault": false
+    }
+  ]
+}
+### حذف محصول
+# @ref login
+DELETE {{baseUrl}}/products/59a9dfa9-0aa9-4d4d-8e0b-b04e4857944d
+Content-Type: application/json
+Authorization: Bearer {{login.accessToken}}
