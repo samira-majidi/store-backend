@@ -12,6 +12,7 @@ import { Category } from '../categories/entity/category.entity';
 import { Upload } from '#src/common/upload/entity/upload.entity';
 import { ProductsController } from './products.controller';
 import { UploadModule } from '#src/common/upload/upload.module';
+import { ProductVariantsService } from './provider/product-variants.service';
 
 @Module({
   imports: [
@@ -19,7 +20,7 @@ import { UploadModule } from '#src/common/upload/upload.module';
     UploadModule,
   ],
   controllers: [ProductsController],
-  providers: [ProductsService],
+  providers: [ProductsService, ProductVariantsService],
   exports: [ProductsService],
 })
 export class ProductsModule {}

@@ -1,45 +1,60 @@
+// src/products/products.controller.ts
 import {
   Controller,
   Post,
+  Patch,
+  Delete,
   Body,
+  Param,
   HttpCode,
   HttpStatus,
-  Delete,
-  Param,
   ParseUUIDPipe,
+  UseFilters,
 } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiCreatedResponse,
+  ApiOkResponse,
   ApiBadRequestResponse,
+  ApiNotFoundResponse,
   ApiConflictResponse,
   ApiInternalServerErrorResponse,
   ApiBearerAuth,
-  ApiNotFoundResponse,
-  ApiOkResponse,
+  ApiParam,
 } from '@nestjs/swagger';
 
 import { Permission } from '#src/rbac/enums/permission.enum';
 import { Permissions } from '#src/rbac/decorators/permissions.decorator';
 import { ActiveUser } from '#src/auth/decorators/active-user.decorator';
-import { CreateProductDto } from './dto/create-product.dto';
+import { UniqueConstraintFilter } from '#src/common/filters/unique-constraint.filter';
+
+import {
+  CreateProductDto,
+  CreateProductVariantDto,
+} from './dto/create-product.dto';
+import { UpdateProductDto } from './dto/update-product.dto';
 import { Product } from './entity/product.entity';
+import { ProductVariant } from './entity/product-variant.entity';
 import { ProductsService } from './provider/products.service';
 
-@ApiTags('Products')
+@ApiTags('Products (Admin)')
 @Controller('products')
+@UseFilters(UniqueConstraintFilter)
+@ApiBearerAuth() // تمام مسیرهای این بخش نیازمند توکن معتبر ادمین هستند
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
+  /**
+   * ایجاد محصول جدید
+   */
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @ApiBearerAuth()
   @Permissions(Permission.PRODUCT_CREATE)
   @ApiOperation({
     summary: 'ایجاد محصول جدید با تنوع‌ها (Variants)',
     description:
-      'این اندپوینت یک محصول جدید همراه با تصویر اصلی، گالری تصاویر، و تنوع‌های مختلف (رنگ، سایز، موجودی و ...) ایجاد می‌کند. (نیاز به دسترسی ادمین)',
+      'این اندپوینت یک محصول جدید همراه با تصویر اصلی، گالری تصاویر، و تنوع‌های مختلف (رنگ، سایز، موجودی و ...) ایجاد می‌کند. (مخصوص ادمین)',
   })
   @ApiCreatedResponse({
     description: 'محصول با موفقیت ایجاد و در دیتابیس ذخیره شد.',
@@ -61,14 +76,132 @@ export class ProductsController {
   ): Promise<Product> {
     return await this.productsService.create(createProductDto, userId);
   }
+
+  /**
+   * ویرایش محصول و همگام‌سازی تنوع‌ها و گالری
+   */
+  @Patch(':id')
+  @HttpCode(HttpStatus.OK)
+  @Permissions(Permission.PRODUCT_UPDATE)
+  @ApiOperation({
+    summary: 'ویرایش محصول، تصاویر و تنوع‌ها',
+    description:
+      'ویرایش مشخصات اصلی محصول، به‌روزرسانی تصاویر گالری و همگام‌سازی کامل واریانت‌ها (افزودن، ویرایش و حذف واریانت‌های غایب). (مخصوص ادمین)',
+  })
+  @ApiParam({
+    name: 'id',
+    type: 'string',
+    format: 'uuid',
+    description: 'شناسه یکتای محصول (UUID)',
+  })
+  @ApiOkResponse({
+    description: 'محصول با موفقیت ویرایش شد.',
+    type: Product,
+  })
+  @ApiNotFoundResponse({
+    description: 'محصول یا دسته‌بندی با شناسه مشخص‌شده پیدا نشد.',
+  })
+  @ApiBadRequestResponse({
+    description:
+      'داده‌های ارسالی نامعتبر است یا تنوع پیش‌فرض نامعتبر تعیین شده است.',
+  })
+  public async updateProduct(
+    @Param('id', ParseUUIDPipe) id: string,
+    @ActiveUser('sub') userId: number,
+    @Body() updateProductDto: UpdateProductDto,
+  ): Promise<Product> {
+    return await this.productsService.update(id, updateProductDto, userId);
+  }
+
+  /**
+   * افزودن تکی یک واریانت به محصول
+   */
+  @Post(':id/variants')
+  @HttpCode(HttpStatus.CREATED)
+  @Permissions(Permission.PRODUCT_UPDATE)
+  @ApiOperation({
+    summary: 'افزودن یک واریانت جدید به محصول',
+    description:
+      'یک تنوع جدید (رنگ، سایز، قیمت و موجودی) به محصول موجود اضافه می‌کند. در صورت انتخاب به عنوان پیش‌فرض، پیش‌فرض قبلی خنثی می‌شود. (مخصوص ادمین)',
+  })
+  @ApiParam({
+    name: 'id',
+    type: 'string',
+    format: 'uuid',
+    description: 'شناسه یکتای محصول (UUID)',
+  })
+  @ApiCreatedResponse({
+    description: 'واریانت جدید با موفقیت اضافه شد.',
+    type: ProductVariant,
+  })
+  @ApiNotFoundResponse({
+    description: 'محصولی با این شناسه یافت نشد.',
+  })
+  @ApiBadRequestResponse({
+    description: 'فیلدهای sku، price یا stock نامعتبر و خالی هستند.',
+  })
+  public async addVariant(
+    @Param('id', ParseUUIDPipe) productId: string,
+    @Body() dto: CreateProductVariantDto,
+  ): Promise<ProductVariant> {
+    return await this.productsService.addVariant(productId, dto);
+  }
+
+  /**
+   * حذف یک واریانت تکی از محصول
+   */
+  @Delete(':id/variants/:variantId')
+  @HttpCode(HttpStatus.OK)
+  @Permissions(Permission.PRODUCT_UPDATE)
+  @ApiOperation({
+    summary: 'حذف یک واریانت از محصول',
+    description:
+      'یک تنوع محصول را حذف می‌کند. اگر واریانت پیش‌فرض حذف شود، اولین واریانت باقی‌مانده خودکار به عنوان پیش‌فرض ست می‌شود. محصول نمی‌تواند بدون واریانت بماند. (مخصوص ادمین)',
+  })
+  @ApiParam({
+    name: 'id',
+    type: 'string',
+    format: 'uuid',
+    description: 'شناسه یکتای محصول (UUID)',
+  })
+  @ApiParam({
+    name: 'variantId',
+    type: 'string',
+    format: 'uuid',
+    description: 'شناسه یکتای تنوع (UUID)',
+  })
+  @ApiOkResponse({
+    description: 'تنوع با موفقیت حذف شد.',
+  })
+  @ApiNotFoundResponse({
+    description: 'تنوع مورد نظر پیدا نشد.',
+  })
+  @ApiBadRequestResponse({
+    description: 'امکان حذف آخرین تنوع محصول وجود ندارد.',
+  })
+  public async removeVariant(
+    @Param('id', ParseUUIDPipe) productId: string,
+    @Param('variantId', ParseUUIDPipe) variantId: string,
+  ): Promise<{ message: string }> {
+    return await this.productsService.removeVariant(productId, variantId);
+  }
+
+  /**
+   * حذف کامل محصول
+   */
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
-  @ApiBearerAuth()
   @Permissions(Permission.PRODUCT_DELETE)
   @ApiOperation({
-    summary: 'حذف محصول',
+    summary: 'حذف کامل محصول',
     description:
-      'حذف کامل یک محصول به همراه تنوع‌های (Variants) آن. تصاویر متصل به محصول در دیتابیس آزاد شده و در نهایت توسط کران‌جاب از فضای ابری حذف می‌شوند. (نیاز به دسترسی ادمین)',
+      'حذف کامل محصول به همراه تمام تنوع‌ها. تصاویر دیتابیس آزاد شده و در صف پاک‌سازی باکت ابری قرار می‌گیرند. (مخصوص ادمین)',
+  })
+  @ApiParam({
+    name: 'id',
+    type: 'string',
+    format: 'uuid',
+    description: 'شناسه یکتای محصول (UUID)',
   })
   @ApiOkResponse({
     description: 'محصول با موفقیت حذف شد.',
@@ -77,7 +210,7 @@ export class ProductsController {
     description: 'محصولی با این شناسه یافت نشد.',
   })
   @ApiInternalServerErrorResponse({
-    description: 'خطای داخلی سرور هنگام حذف محصول.',
+    description: 'خطای سرور هنگام حذف محصول.',
   })
   public async deleteProduct(
     @Param('id', ParseUUIDPipe) id: string,

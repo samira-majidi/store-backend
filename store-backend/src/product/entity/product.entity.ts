@@ -28,29 +28,25 @@ export class Product {
   slug: string;
 
   // ================= تصاویر =================
-  @ManyToOne(() => Upload, { eager: true, nullable: false }) // nullable: false یعنی محصول حتما باید عکس اصلی داشته باشه
-  @JoinColumn({ name: 'mainImageId' })
-  mainImage: Upload;
-
-  @ManyToMany(() => Upload, { eager: true })
+  @ManyToMany(() => Upload)
   @JoinTable({
-    name: 'product_gallery', // ساخت خودکار جدول واسط در دیتابیس
+    name: 'product_images',
     joinColumn: { name: 'productId', referencedColumnName: 'id' },
     inverseJoinColumn: { name: 'uploadId', referencedColumnName: 'id' },
   })
-  gallery: Upload[];
+  images: Upload[];
 
-  @Column({ name: 'category_id' })
+  @Column({ type: 'jsonb', default: [] })
+  imageOrder: number[];
+
+  @Column({ type: 'int' })
   categoryId: number;
 
-  @ManyToOne(() => Category, (category) => category.products, {
-    nullable: false, // محصول حتماً باید دسته‌بندی داشته باشه
-    onDelete: 'RESTRICT',
-  })
-  @JoinColumn({ name: 'category_id' })
+  @ManyToOne(() => Category)
+  @JoinColumn({ name: 'categoryId' })
   category: Category;
 
-  @Column({ type: 'simple-array', nullable: true })
+  @Column({ type: 'jsonb', nullable: true, default: [] })
   features: string[];
 
   @Column({ type: 'text', nullable: true })

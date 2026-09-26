@@ -19,17 +19,19 @@ export class CreateProductVariantDto {
   @IsNotEmpty()
   sku: string;
 
-  @IsNumber()
-  @Min(0)
+  @Type(() => Number)
+  @IsInt({ message: 'قیمت باید یک عدد صحیح باشد' })
+  @Min(0, { message: 'قیمت نمی‌تواند منفی باشد' })
   price: number;
 
   @IsOptional()
-  @IsNumber()
+  @Type(() => Number)
+  @IsInt()
   @Min(0)
   @Max(100)
   discountPercentage?: number;
 
-  @IsNumber()
+  @IsInt({ message: 'موجودی باید عدد صحیح باشد' })
   @Min(0)
   stock: number;
 
@@ -46,10 +48,6 @@ export class CreateProductVariantDto {
   model?: string;
 
   @IsOptional()
-  @IsNumber()
-  specificImageId?: number;
-
-  @IsOptional()
   @IsBoolean()
   isDefault?: boolean;
 }
@@ -63,14 +61,18 @@ export class CreateProductDto {
   @IsString()
   slug?: string;
 
-  @IsNumber()
-  @IsNotEmpty()
-  mainImageId: number;
-
-  @IsOptional()
+  @ApiProperty({
+    description:
+      'آرایه‌ای از شناسه‌های تصاویر. اولین شناسه (ایندکس صفر) به عنوان عکس اصلی و بقیه به عنوان گالری در نظر گرفته می‌شوند.',
+    example: [12, 5, 8],
+    type: [Number],
+  })
   @IsArray()
-  @IsNumber({}, { each: true })
-  galleryImageIds?: number[];
+  @ArrayMinSize(1, {
+    message: 'محصول باید حداقل دارای یک تصویر (به عنوان تصویر اصلی) باشد',
+  })
+  @IsNumber({}, { each: true, message: 'شناسه تصویر باید عدد باشد' })
+  imageIds: number[];
 
   @ApiProperty({ description: 'آیدی دسته‌بندی محصول', example: 5 })
   @IsInt()

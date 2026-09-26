@@ -13,7 +13,6 @@ import {
   Min,
 } from 'class-validator';
 
-// فقط حروف فارسی/انگلیسی، عدد و خط تیره
 const SLUG_PATTERN = /^[\u0600-\u06FFa-z0-9]+(?:-[\u0600-\u06FFa-z0-9]+)*$/;
 
 export class CreateCategoryDto {

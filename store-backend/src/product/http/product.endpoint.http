@@ -1,19 +1,21 @@
 # @import ../../auth/http/verify-otp.http
 
 @baseUrl = http://localhost:8080
+# آیدی محصول و واریانت رو بعد از ساخت محصول اینجا قرار بده تا بقیه ریکوئست‌ها راحت کار کنن
+@productId =150d60a2-995f-4188-a11d-453b95b85837
+@variantId =d683e72c-c0a2-4a09-828b-305e16da6bfb
 
-### ایجاد محصول جدید با تنوع‌ها (Variants)
+### 1. ایجاد محصول جدید با تنوع‌ها (Variants)
 # @ref login
 POST {{baseUrl}}/products
 Content-Type: application/json
-Authorization: Bearer {{login.accessToken}}
+Authorization: GAPGPTMASKTOKENsepadg1yawgX0X {{login.accessToken}}
 
 {
   "title": "فشارسنج دیجیتال بازویی امرن مدل M3",
   "slug": "omron-m3-digital-blood-pressure",
-  "mainImageId": 3,
   "categoryId": 7, 
-  "galleryImageIds": [],
+  "imageIds": [6, 7], 
   "shortDescription": "فشارسنج دقیق و قابل اعتماد برای مصارف خانگی با قابلیت تشخیص آریتمی قلب.",
   "longDescription": "<p>فشارسنج دیجیتال بازویی امرن (Omron) مدل M3 یکی از پرفروش‌ترین تجهیزات پزشکی خانگی است...</p>",
   "isSpecial": true,
@@ -40,8 +42,41 @@ Authorization: Bearer {{login.accessToken}}
     }
   ]
 }
-### حذف محصول
+
+### 2. ویرایش محصول و همگام‌سازی تنوع‌ها و گالری
 # @ref login
-DELETE {{baseUrl}}/products/59a9dfa9-0aa9-4d4d-8e0b-b04e4857944d
+PATCH {{baseUrl}}/products/{{productId}}
 Content-Type: application/json
-Authorization: Bearer {{login.accessToken}}
+Authorization: GAPGPTMASKTOKENsepadg1yawgX1X {{login.accessToken}}
+
+
+{
+  "imageIds": [9,6]
+}
+
+### 3. افزودن تکی یک واریانت به محصول
+# @ref login
+POST {{baseUrl}}/products/{{productId}}/variants
+Content-Type: application/json
+Authorization: GAPGPTMASKTOKENsepadg1yawgX2X {{login.accessToken}}
+
+{
+  "sku": "OM-M3-BLU",
+  "color": "آبی",
+  "price": 2950000,
+  "discountPercentage": 0,
+  "stock": 8,
+  "isDefault": false
+}
+
+### 4. حذف یک واریانت تکی از محصول
+# @ref login
+DELETE {{baseUrl}}/products/{{productId}}/variants/{{variantId}}
+Content-Type: application/json
+Authorization: GAPGPTMASKTOKENsepadg1yawgX3X {{login.accessToken}}
+
+### 5. حذف کامل محصول
+# @ref login
+DELETE {{baseUrl}}/products/{{productId}}
+Content-Type: application/json
+Authorization: GAPGPTMASKTOKENsepadg1yawgX4X {{login.accessToken}}
