@@ -27,6 +27,9 @@ export class Product {
   @Column({ type: 'varchar', length: 255, unique: true })
   slug: string;
 
+  @Index()
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  brand?: string | null;
   // ================= تصاویر =================
   @ManyToMany(() => Upload)
   @JoinTable({

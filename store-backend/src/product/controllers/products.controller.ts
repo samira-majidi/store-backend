@@ -32,16 +32,16 @@ import { UniqueConstraintFilter } from '#src/common/filters/unique-constraint.fi
 import {
   CreateProductDto,
   CreateProductVariantDto,
-} from './dto/create-product.dto';
-import { UpdateProductDto } from './dto/update-product.dto';
-import { Product } from './entity/product.entity';
-import { ProductVariant } from './entity/product-variant.entity';
-import { ProductsService } from './provider/products.service';
+} from '../dto/create-product.dto';
+import { UpdateProductDto } from '../dto/update-product.dto';
+import { Product } from '../entity/product.entity';
+import { ProductVariant } from '../entity/product-variant.entity';
+import { ProductsService } from '../provider/products.service';
 
 @ApiTags('Products (Admin)')
 @Controller('products')
 @UseFilters(UniqueConstraintFilter)
-@ApiBearerAuth() // تمام مسیرهای این بخش نیازمند توکن معتبر ادمین هستند
+@ApiBearerAuth()
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 

@@ -79,7 +79,7 @@ export class ProductVariantsService {
       return manager.create(ProductVariant, {
         ...vDto,
         ...pricing,
-        // اگر کلا دیفالت نفرستاده بودن، همون اولی رو دیفالت در نظر بگیر
+
         isDefault: hasDefault ? Boolean(vDto.isDefault) : index === 0,
         product,
       });
@@ -127,14 +127,11 @@ export class ProductVariantsService {
       const vDto = variantsDto[index];
       let isDefault = false;
       if (hasDefaultInPayload) {
-        // حالت اول: فرانت‌اند صریحاً تعیین کرده کی دیفالت باشه
         isDefault = Boolean(vDto.isDefault);
       } else if (vDto.id) {
-        // حالت دوم: ویرایش معمولی (مثل تغییر قیمت) و فرانت‌اند دست به دیفالت نزده -> وضعیت قبلی حفظ بشه
         const existing = currentVariants.find((v) => v.id === vDto.id);
         isDefault = existing ? existing.isDefault : false;
       } else {
-        // حالت سوم: واریانت جدید اضافه شده و هیچ دیفالتی کلاً نداریم
         isDefault = !hasExistingDefault && index === 0;
       }
 

@@ -2,47 +2,40 @@
 
 @baseUrl = http://localhost:8080
 # آیدی محصول و واریانت رو بعد از ساخت محصول اینجا قرار بده تا بقیه ریکوئست‌ها راحت کار کنن
-@productId =150d60a2-995f-4188-a11d-453b95b85837
+@productId =b4015987-66cb-4634-9203-b515e3277033
 @variantId =d683e72c-c0a2-4a09-828b-305e16da6bfb
-
+@categorySlug = digital-arm-blood-pressure
 ### 1. ایجاد محصول جدید با تنوع‌ها (Variants)
 # @ref login
 POST {{baseUrl}}/products
 Content-Type: application/json
 Authorization: GAPGPTMASKTOKENsepadg1yawgX0X {{login.accessToken}}
-
 {
-  "title": "فشارسنج دیجیتال بازویی امرن مدل M3",
-  "slug": "omron-m3-digital-blood-pressure",
-  "categoryId": 7, 
-  "imageIds": [6, 7], 
-  "shortDescription": "فشارسنج دقیق و قابل اعتماد برای مصارف خانگی با قابلیت تشخیص آریتمی قلب.",
-  "longDescription": "<p>فشارسنج دیجیتال بازویی امرن (Omron) مدل M3 یکی از پرفروش‌ترین تجهیزات پزشکی خانگی است...</p>",
+  "title": "دستگاه اکسیژن‌ساز ۵ لیتری امرن",
+  "brand": "Omron",
+  "slug": "omron-oxygen-concentrator-5l",
+  "categoryId": 8, 
+  "imageIds": [14], 
+  "shortDescription": "اکسیژن‌ساز بی‌صدا و قدرتمند مناسب استفاده ۲۴ ساعته.",
   "isSpecial": true,
-  "features": [
-    "برند: امرن (Omron)",
-    "کشور سازنده: ویتنام (تحت لیسانس ژاپن)",
-    "نوع: دیجیتال بازویی"
-  ],
+  "features": ["ظرفیت: ۵ لیتر در دقیقه", "خلوص اکسیژن: بالای ۹۳ درصد"],
   "variants": [
     {
-      "sku": "OM-M3-WHT",
-      "color": "سفید",
-      "price": 2800000,
-      "discountPercentage": 5, 
-      "stock": 15,
+      "sku": "OMR-OXY-STD",
+      "model": "استاندارد",
+      "price": 28000000,
+      "stock": 3,
       "isDefault": true
     },
     {
-      "sku": "OM-M3-BLK",
-      "color": "مشکی",
-      "price": 2850000,
-      "stock": 5,
+      "sku": "OMR-OXY-PRO",
+      "model": "پرو (همراه با سنسور پالس اکسی‌متر)",
+      "price": 31000000,
+      "stock": 1,
       "isDefault": false
     }
   ]
 }
-
 ### 2. ویرایش محصول و همگام‌سازی تنوع‌ها و گالری
 # @ref login
 PATCH {{baseUrl}}/products/{{productId}}
@@ -80,3 +73,49 @@ Authorization: GAPGPTMASKTOKENsepadg1yawgX3X {{login.accessToken}}
 DELETE {{baseUrl}}/products/{{productId}}
 Content-Type: application/json
 Authorization: GAPGPTMASKTOKENsepadg1yawgX4X {{login.accessToken}}
+  
+
+
+### دریافت محصولات یک دسته‌بندی
+GET {{baseUrl}}/public/products/category/digital-arm-blood-pressure?page=1&limit=20
+Content-Type: application/json
+
+### دریافت محصولات پیشنهاد ویژه
+GET {{baseUrl}}/public/products/special?limit=10
+Content-Type: application/json
+
+### دریافت جزئیات یک محصول با شناسه
+GET {{baseUrl}}/public/products/{{productId}}
+Content-Type: application/json
+
+
+### ==================== فیلتر محصولات ====================
+
+### ۱. جستجوی زنده (Instant Search)
+GET {{baseUrl}}/public/products/search?keyword=فشارسنج
+Content-Type: application/json
+
+### ۲. دریافت گزینه‌های فیلتر (کل محصولات - بدون دسته‌بندی)
+GET {{baseUrl}}/public/products/filter-options
+Content-Type: application/json
+
+### ۳. دریافت گزینه‌های فیلتر برای یک دسته‌بندی خاص (با ID)
+GET {{baseUrl}}/public/products/filter-options?categoryId=8
+Content-Type: application/json
+
+### ۴. دریافت گزینه‌های فیلتر برای یک دسته‌بندی خاص (با Slug)
+GET {{baseUrl}}/public/products/filter-options?categorySlug={{categorySlug}}
+Content-Type: application/json
+
+### ۵. فیلتر محصولات: فقط بر اساس بازه قیمت
+GET {{baseUrl}}/public/products/category/{{categorySlug}}?minPrice=1000000&maxPrice=5000000
+Content-Type: application/json
+
+### ۶. فیلتر محصولات: فقط بر اساس برند
+# نکته: اگر `brands` در DTO به صورت آرایه است، ممکن است نیاز باشد در URL به فرمت &brands=Omron&brands=Beurer ارسال شود یا اگر با کاما جدا می‌شود به شکل زیر:
+GET {{baseUrl}}/public/products/category/{{categorySlug}}?brands=Beurer
+Content-Type: application/json
+
+### ۷. فیلتر ترکیبی کامل: کلمه کلیدی + برند + بازه قیمت + دسته‌بندی
+GET {{baseUrl}}/public/products/category/{{categorySlug}}?brands=Microlife&minPrice=1000000&maxPrice=50000000
+Content-Type: application/json

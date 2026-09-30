@@ -9,13 +9,13 @@ POST {{baseUrl}}/categories
 Content-Type: application/json
 Authorization: Bearer {{login.accessToken}}
 {
-  "name": "فشارسنج دیجیتال بازویی",
-  "slug": "digital-arm-blood-pressure",
+  "name": "فشارسنج دیجیتال سخنگو",
+  "slug": "digital-talking-blood-pressure",
   "parentId": 1,
-  "sortOrder": 1,
-  "description": "فشارسنج‌های هوشمند و دیجیتالی بازویی با حافظه ذخیره‌سازی",
-  "metaTitle": "خرید فشارسنج دیجیتال بازویی اصل | آریامدیک",
-  "metaDescription": "لیست قیمت جدیدترین فشارسنج‌های بازویی دیجیتال",
+  "sortOrder": 2,
+  "description": "فشارسنج‌های هوشمند و دیجیتالی سخنگو با قابلیت اعلام صوتی نتایج و حافظه ذخیره‌سازی",
+  "metaTitle": "خرید فشارسنج دیجیتال سخنگو اصل | آریامدیک",
+  "metaDescription": "لیست قیمت و خرید جدیدترین مدل‌های فشارسنج دیجیتال سخنگو با ضمانت اصالت کالا",
   "isActive": true
 }
 

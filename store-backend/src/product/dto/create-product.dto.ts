@@ -61,6 +61,11 @@ export class CreateProductDto {
   @IsString()
   slug?: string;
 
+  @ApiProperty({ description: 'نام برند برای فیلتر کردن', example: 'Omron' })
+  @IsOptional()
+  @IsString()
+  brand?: string;
+
   @ApiProperty({
     description:
       'آرایه‌ای از شناسه‌های تصاویر. اولین شناسه (ایندکس صفر) به عنوان عکس اصلی و بقیه به عنوان گالری در نظر گرفته می‌شوند.',

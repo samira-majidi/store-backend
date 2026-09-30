@@ -10,6 +10,6 @@ import { CategoriesTreeService } from './provider/CategoriesTreeCache.service';
   imports: [TypeOrmModule.forFeature([Category])],
   controllers: [CategoriesController],
   providers: [CategoriesService, CategoriesTreeService],
-  exports: [CategoriesService],
+  exports: [CategoriesService, CategoriesTreeService],
 })
 export class CategoriesModule {}

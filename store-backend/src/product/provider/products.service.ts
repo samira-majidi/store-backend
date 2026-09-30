@@ -19,6 +19,7 @@ import { Upload } from '#src/common/upload/entity/upload.entity';
 import { Category } from '../../categories/entity/category.entity';
 import { UpdateProductDto } from '../dto/update-product.dto';
 import { ProductVariantsService } from './product-variants.service';
+import { formatProductResponse } from '#src/common/utils/product-images.util';
 
 @Injectable()
 export class ProductsService {
@@ -42,16 +43,6 @@ export class ProductsService {
       .toLowerCase()
       .replace(/\s+/g, '-')
       .replace(/[^\w\u0600-\u06FF-]+/g, '');
-  }
-
-  private formatProductResponse(product: Product): Product {
-    if (product.images?.length && product.imageOrder?.length) {
-      const imagesMap = new Map(product.images.map((img) => [img.id, img]));
-      product.images = product.imageOrder
-        .map((id) => imagesMap.get(id))
-        .filter((img): img is Upload => Boolean(img));
-    }
-    return product;
   }
 
   async create(dto: CreateProductDto, userId: number): Promise<Product> {
@@ -119,6 +110,7 @@ export class ProductsService {
       const product = manager.create(Product, {
         title: dto.title,
         slug: slug,
+        brand: dto.brand,
         categoryId: dto.categoryId,
         images: attachedImages, // 👈 اینجا هم ستون images مقداردهی می‌شه
         imageOrder: dto.imageIds, // 👈 ترتیب ارسالی فرانت در دیتابیس ذخیره می‌شه
@@ -153,7 +145,7 @@ export class ProductsService {
     });
 
     // 👈 اصلاح نهایی: پاس دادن محصول به هلپر برای مرتب‌سازی قبل از برگشت به فرانت‌اند
-    return this.formatProductResponse(createdProduct);
+    return formatProductResponse(createdProduct);
   }
 
   /**
@@ -256,7 +248,7 @@ export class ProductsService {
       where: { id },
       relations: ['images', 'variants'], // 👈 واکشی روابط جدید
     });
-    return this.formatProductResponse(updatedProduct);
+    return formatProductResponse(updatedProduct);
   }
 
   /**
