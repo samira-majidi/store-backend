@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
-import { ScheduleModule } from '@nestjs/schedule'; // ایمپورت جا افتاده اضافه شد
+import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { AppController } from './app.controller';
@@ -19,6 +19,7 @@ import { PermissionGuard } from './rbac/guards/permission.guard';
 import { CategoriesModule } from './categories/categories.module';
 import { UploadModule } from './common/upload/upload.module';
 import { ProductsModule } from './product/products.module';
+import { CartModule } from './cart/cart.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { ProductsModule } from './product/products.module';
     CategoriesModule,
     UploadModule,
     ProductsModule,
+    CartModule,
   ],
   controllers: [AppController],
   providers: [

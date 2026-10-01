@@ -2,8 +2,8 @@
 
 @baseUrl = http://localhost:8080
 # آیدی محصول و واریانت رو بعد از ساخت محصول اینجا قرار بده تا بقیه ریکوئست‌ها راحت کار کنن
-@productId =b4015987-66cb-4634-9203-b515e3277033
-@variantId =d683e72c-c0a2-4a09-828b-305e16da6bfb
+@productId =045662bf-8900-4846-915f-56f4f02deca8
+@variantId =65b36ebf-3bc3-43c2-88fb-e1415c1c20a1
 @categorySlug = digital-arm-blood-pressure
 ### 1. ایجاد محصول جدید با تنوع‌ها (Variants)
 # @ref login
@@ -60,6 +60,18 @@ Authorization: GAPGPTMASKTOKENsepadg1yawgX2X {{login.accessToken}}
   "discountPercentage": 0,
   "stock": 8,
   "isDefault": false
+}
+
+
+### تنظیم تخفیف شگفت‌انگیز برای یک واریانت (Flash Sale)
+# @ref login
+PATCH {{baseUrl}}/products/{{productId}}/variants/{{variantId}}/discount
+Content-Type: application/json
+Authorization: GAPGPTMASKTOKENsepadg1yawgX3X {{login.accessToken}}
+
+{
+  "discountPercentage": 0
+ 
 }
 
 ### 4. حذف یک واریانت تکی از محصول

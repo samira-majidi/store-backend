@@ -1,0 +1,91 @@
+# @import ../../auth/http/verify-otp.http
+
+@baseUrl = http://localhost:8080
+
+# آیدی محصول و واریانت رو بعد از ساخت محصول اینجا قرار بده تا بقیه ریکوئست‌ها راحت کار کنن
+@productId =428e92f9-1dcb-4053-adba-0d98288eb3ac
+@variantId = 2c9c0a8a-885b-4b40-b25f-16a83b3ba075
+@guestCartId = 11111111-2222-3333-4444-555555555555
+
+# توکن کاربر لاگین‌شده رو اینجا قرار بده
+@userToken = YOUR_ACCESS_TOKEN_HERE
+
+
+#############################################################
+# ۱. بخش سبد خرید کاربر مهمان (Guest Cart)
+#############################################################
+
+### ۱.۱. افزودن محصول به سبد مهمان
+POST {{baseUrl}}/cart/guest/add
+Content-Type: application/json
+
+{
+  "cartId": "{{guestCartId}}",
+  "variantId": "{{variantId}}",
+  "quantity": 2
+}
+
+### ۱.۲. مشاهده سبد خرید مهمان
+GET {{baseUrl}}/cart/guest/{{guestCartId}}
+
+
+#############################################################
+# ۲. بخش سبد خرید کاربر لاگین‌شده (User Cart)
+#############################################################
+
+### ۲.۱. افزودن محصول به سبد کاربر
+# @ref login
+POST {{baseUrl}}/cart/user/add
+Content-Type: application/json
+Authorization: GAPGPTMASKTOKENsepadg1yawgX4X {{login.accessToken}}
+  
+
+
+{
+  "variantId": "{{variantId}}",
+  "quantity": 1
+}
+
+### ۲.۲. مشاهده سبد خرید کاربر
+# @ref login
+GET {{baseUrl}}/cart/user
+Authorization: GAPGPTMASKTOKENsepadg1yawgX4X {{login.accessToken}}
+  
+
+#############################################################
+# ۳. ادغام سبد خرید بعد از ورود (Merge Cart)
+#############################################################
+
+### ۳.۱. انتقال سبد مهمان به حساب کاربر
+# @ref login
+POST {{baseUrl}}/cart/user/merge
+Content-Type: application/json
+Authorization: GAPGPTMASKTOKENsepadg1yawgX4X {{login.accessToken}}
+  
+
+{
+  "guestCartId": "{{guestCartId}}"
+}
+
+### ۱.۳. به‌روزرسانی تعداد کالا در سبد مهمان
+PATCH {{baseUrl}}/cart/guest/update
+Content-Type: application/json
+
+{
+  "cartId": "{{guestCartId}}",
+  "variantId": "{{variantId}}",
+  "quantity": 3
+}
+
+
+
+### ۲.۳. به‌روزرسانی تعداد کالا در سبد کاربر
+# @ref login
+PATCH {{baseUrl}}/cart/user/update
+Content-Type: application/json
+Authorization: GAPGPTMASKTOKENsepadg1yawgX4X {{login.accessToken}}
+
+{
+  "variantId": "{{variantId}}",
+  "quantity": 3
+}

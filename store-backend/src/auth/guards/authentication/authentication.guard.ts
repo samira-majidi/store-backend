@@ -8,7 +8,7 @@ import { Reflector } from '@nestjs/core';
 import { AuthType } from '#src/auth/enums/auth-type.enum';
 import { AccessTokenGuard } from '../access-token/access-token.guard';
 import { AUTH_TYPE_KEY } from '#src/auth/constants/auth-constant';
-
+import { Request } from 'express';
 @Injectable()
 export class AuthenticationGuard implements CanActivate {
   authTypeGuardMap: Record<AuthType, CanActivate>;
@@ -17,8 +17,6 @@ export class AuthenticationGuard implements CanActivate {
     private readonly reflector: Reflector,
     private readonly accessTokenGuard: AccessTokenGuard,
   ) {
-    //آن `[AuthType.Bearer]` آرایه نیست؛ یعنی مقدار `AuthType.Bearer` را حساب کن و
-    // از آن به‌عنوان **کلید (key)** آبجکت استفاده کن.
     this.authTypeGuardMap = {
       [AuthType.Bearer]: this.accessTokenGuard,
 

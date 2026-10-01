@@ -11,6 +11,7 @@ import { CreateProductVariantDto } from '../dto/create-product.dto';
 import { ProductVariant } from '../entity/product-variant.entity';
 import { Product } from '../entity/product.entity';
 import { UpdateProductVariantDto } from '../dto/update-product.dto';
+import { SetDiscountDto } from '../dto/set-discount.dto';
 
 @Injectable()
 export class ProductVariantsService {
@@ -22,9 +23,38 @@ export class ProductVariantsService {
     private readonly dataSource: DataSource,
   ) {}
 
-  /**
-   * محاسبه امن تخفیف و قیمت نهایی به ریال
-   */
+  async setVariantDiscount(
+    productId: string,
+    variantId: string,
+    dto: SetDiscountDto,
+  ): Promise<ProductVariant> {
+    const variant = await this.variantRepository.findOne({
+      where: { id: variantId, productId },
+    });
+
+    if (!variant) {
+      throw new NotFoundException(
+        `تنوعی با شناسه ${variantId} برای این محصول یافت نشد.`,
+      );
+    }
+
+    const newDiscountPercentage = dto.discountPercentage ?? 0;
+
+    const pricing = this.calculatePricing(variant.price, newDiscountPercentage);
+
+    variant.discountPercentage = pricing.discountPercentage;
+    variant.discountAmount = pricing.discountAmount;
+    variant.finalPrice = pricing.finalPrice;
+
+    const savedVariant = await this.variantRepository.save(variant);
+
+    this.logger.log(
+      `تخفیف واریانت ${variantId} از محصول ${productId} به ${newDiscountPercentage}% تغییر یافت.`,
+    );
+
+    return savedVariant;
+  }
+
   calculatePricing(
     price: number,
     discountPercentage?: number,
@@ -51,9 +81,6 @@ export class ProductVariantsService {
     };
   }
 
-  /**
-   * ساخت نمونه‌های واریانت برای درج اولیه هنگام ساخت محصول
-   */
   buildInitialVariants(
     variantsDto: CreateProductVariantDto[],
     product: Product,
@@ -63,7 +90,6 @@ export class ProductVariantsService {
       Boolean(v.isDefault),
     ).length;
 
-    // هماهنگی با syncVariantsForProduct و ProductsService
     if (defaultVariantsCount > 1) {
       throw new BadRequestException('فقط یک واریانت می‌تواند پیش‌فرض باشد.');
     }
@@ -85,9 +111,7 @@ export class ProductVariantsService {
       });
     });
   }
-  /**
-   * همگام‌سازی واریانت‌ها در زمان ویرایش محصول (Update)
-   */
+
   async syncVariantsForProduct(
     product: Product,
     variantsDto: UpdateProductVariantDto[],
@@ -172,13 +196,13 @@ export class ProductVariantsService {
         variantsToSave.push(created);
       }
     }
-
+    const isAnyDefault = variantsToSave.some((v) => v.isDefault);
+    if (!isAnyDefault && variantsToSave.length > 0) {
+      variantsToSave[0].isDefault = true;
+    }
     return await manager.save(ProductVariant, variantsToSave);
   }
 
-  /**
-   * افزودن تکی یک واریانت به محصول
-   */
   async addVariant(
     productId: string,
     dto: CreateProductVariantDto,
@@ -233,13 +257,9 @@ export class ProductVariantsService {
 
     return await this.variantRepository.findOneOrFail({
       where: { id: newVariantId },
-      // relations: ['product'],
     });
   }
 
-  /**
-   * حذف یک واریانت تکی با سیاست انتخاب هوشمند پیش‌فرض جایگزین
-   */
   async removeVariant(
     productId: string,
     variantId: string,

@@ -37,6 +37,7 @@ export class ProductVariant {
     transformer: new ColumnNumericTransformer(),
   })
   discountAmount: number;
+
   @Column({
     type: 'bigint',
     default: 0,

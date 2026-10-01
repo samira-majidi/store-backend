@@ -37,13 +37,18 @@ import { UpdateProductDto } from '../dto/update-product.dto';
 import { Product } from '../entity/product.entity';
 import { ProductVariant } from '../entity/product-variant.entity';
 import { ProductsService } from '../provider/products.service';
+import { SetDiscountDto } from '../dto/set-discount.dto';
+import { ProductVariantsService } from '../provider/product-variants.service';
 
 @ApiTags('Products (Admin)')
 @Controller('products')
 @UseFilters(UniqueConstraintFilter)
 @ApiBearerAuth()
 export class ProductsController {
-  constructor(private readonly productsService: ProductsService) {}
+  constructor(
+    private readonly productsService: ProductsService,
+    private readonly productVariantsService: ProductVariantsService,
+  ) {}
 
   /**
    * ایجاد محصول جدید
@@ -111,6 +116,47 @@ export class ProductsController {
     @Body() updateProductDto: UpdateProductDto,
   ): Promise<Product> {
     return await this.productsService.update(id, updateProductDto, userId);
+  }
+  /**
+   * تنظیم یا ویرایش تخفیف شگفت‌انگیز برای یک واریانت
+   */
+  @Patch(':id/variants/:variantId/discount')
+  @HttpCode(HttpStatus.OK)
+  @Permissions(Permission.PRODUCT_UPDATE)
+  @ApiOperation({
+    summary: 'تنظیم تخفیف شگفت‌انگیز برای یک تنوع (Flash Sale)',
+    description:
+      'درصد تخفیف و زمان پایان تخفیف را برای یک تنوع خاص تنظیم می‌کند. قیمت نهایی و مبلغ تخفیف به صورت خودکار توسط سیستم محاسبه و همگام‌سازی می‌شود. (مخصوص ادمین)',
+  })
+  @ApiParam({
+    name: 'id',
+    type: 'string',
+    format: 'uuid',
+    description: 'شناسه یکتای محصول (UUID)',
+  })
+  @ApiParam({
+    name: 'variantId',
+    type: 'string',
+    format: 'uuid',
+    description: 'شناسه یکتای تنوع (UUID)',
+  })
+  @ApiOkResponse({
+    description: 'تخفیف با موفقیت روی تنوع اعمال شد و قیمت‌ها بروزرسانی شدند.',
+    type: ProductVariant,
+  })
+  @ApiNotFoundResponse({
+    description: 'محصول یا تنوع مورد نظر پیدا نشد.',
+  })
+  public async setVariantDiscount(
+    @Param('id', ParseUUIDPipe) productId: string,
+    @Param('variantId', ParseUUIDPipe) variantId: string,
+    @Body() setDiscountDto: SetDiscountDto, // یادت نره این DTO رو ایمپورت کنی
+  ): Promise<ProductVariant> {
+    return await this.productVariantsService.setVariantDiscount(
+      productId,
+      variantId,
+      setDiscountDto,
+    );
   }
 
   /**
