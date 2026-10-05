@@ -1,4 +1,12 @@
-import { Controller, Post, Body, Get, Param, Patch } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  Param,
+  Patch,
+  Delete,
+} from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { CartService } from './cart.service';
 
@@ -84,5 +92,23 @@ export class CartController {
       dto.variantId,
       dto.quantity,
     );
+  }
+  // ================= حذف آیتم برای مهمان =================
+  @Delete('guest/:cartId/:variantId')
+  @Auth(AuthType.None)
+  async removeGuestCartItem(
+    @Param('cartId') cartId: string,
+    @Param('variantId') variantId: string,
+  ) {
+    return await this.cartService.removeGuestCartItem(cartId, variantId);
+  }
+
+  // ================= حذف آیتم برای کاربر لاگین‌شده =================
+  @Delete('user/:variantId')
+  async removeUserCartItem(
+    @ActiveUser('sub') userId: number,
+    @Param('variantId') variantId: string,
+  ) {
+    return await this.cartService.removeUserCartItem(userId, variantId);
   }
 }

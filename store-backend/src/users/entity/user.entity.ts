@@ -1,5 +1,6 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { UserRole } from '../dtos/user-role.enum';
+import { Order } from '#src/orders/entities/order.entity';
 
 @Entity('users')
 export class User {
@@ -35,7 +36,6 @@ export class User {
   })
   role: UserRole;
 
-  // @OneToMany(() => Order, (order) => order.user)
-  // orders: Order[];
-  // (این رو فعلاً کامنت گذاشتم که یادت باشه بعداً برای فروشگاه اضافه‌اش کنی)
+  @OneToMany(() => Order, (order) => order.user)
+  orders: Order[];
 }

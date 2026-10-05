@@ -4,7 +4,7 @@
 
 # آیدی محصول و واریانت رو بعد از ساخت محصول اینجا قرار بده تا بقیه ریکوئست‌ها راحت کار کنن
 @productId =428e92f9-1dcb-4053-adba-0d98288eb3ac
-@variantId = 2c9c0a8a-885b-4b40-b25f-16a83b3ba075
+@variantId = 3221101c-466a-4397-95e0-bbc087f0cfe5
 @guestCartId = 11111111-2222-3333-4444-555555555555
 
 # توکن کاربر لاگین‌شده رو اینجا قرار بده
@@ -22,7 +22,7 @@ Content-Type: application/json
 {
   "cartId": "{{guestCartId}}",
   "variantId": "{{variantId}}",
-  "quantity": 2
+  "quantity": 8
 }
 
 ### ۱.۲. مشاهده سبد خرید مهمان
@@ -74,7 +74,7 @@ Content-Type: application/json
 {
   "cartId": "{{guestCartId}}",
   "variantId": "{{variantId}}",
-  "quantity": 3
+  "quantity": 6
 }
 
 
@@ -89,3 +89,15 @@ Authorization: GAPGPTMASKTOKENsepadg1yawgX4X {{login.accessToken}}
   "variantId": "{{variantId}}",
   "quantity": 3
 }
+
+DELETE {{baseUrl}}/cart/guest/{{guestCartId}}/{{variantId}}
+
+
+
+# @ref login
+DELETE {{baseUrl}}/cart/user/{{variantId}}
+Authorization: GAPGPTMASKTOKENsepadg1yawgX4X {{login.accessToken}}
+
+
+
+//جلوگیر از اجازه ندادن  به اضافه کردن تعداد بیشتر از استاک برا اپدین و اضافه اولیه

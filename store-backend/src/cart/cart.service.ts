@@ -1,5 +1,10 @@
 import { RedisService } from '#src/redis/providers/redis.service';
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, Repository } from 'typeorm';
 import { GuestCartItem } from './dto/guest-cart.interface';
@@ -7,6 +12,8 @@ import { CartItemEntity } from './entity/cart-item.entity';
 import { CartEntity } from './entity/cart.entity';
 import { RedisLockService } from '#src/redis/providers/redis-lock.service';
 import { ProductVariant } from '#src/product/entity/product-variant.entity';
+import { CartUtils } from './utils/helper';
+import { formatCartItem } from './utils/format.util';
 
 @Injectable()
 export class CartService {
@@ -19,7 +26,36 @@ export class CartService {
     private redisService: RedisService,
     private redisLockService: RedisLockService,
     private dataSource: DataSource,
-  ) {}
+  ) {} // 🔍 متد کمکی برای بررسی موجودی انبار
+  private async validateStock(variantId: string, requestedQuantity: number) {
+    if (requestedQuantity <= 0) {
+      throw new BadRequestException('تعداد کالا باید حداقل ۱ عدد باشد.');
+    }
+
+    const variant = await this.dataSource
+      .getRepository(ProductVariant)
+      .findOne({
+        where: { id: variantId },
+      });
+
+    if (!variant) {
+      throw new NotFoundException('این کالا یا تنوع یافت نشد.');
+    }
+
+    if (variant.stock <= 0) {
+      throw new BadRequestException(
+        `متاسفانه کالای «${variant.sku}» ناموجود شده است.`,
+      );
+    }
+
+    if (requestedQuantity > variant.stock) {
+      throw new BadRequestException(
+        `تعداد درخواستی بیشتر از موجودی انبار است. (حداکثر موجودی: ${variant.stock} عدد)`,
+      );
+    }
+
+    return variant;
+  }
 
   // ۱. افزودن برای مهمان (فقط Redis)
   async addToGuestCart(cartId: string, variantId: string, quantity: number) {
@@ -34,6 +70,8 @@ export class CartService {
     );
 
     const existingItem = cart.find((item) => item.variantId === variantId);
+    const targetQuantity = (existingItem?.quantity || 0) + quantity;
+    await this.validateStock(variantId, targetQuantity);
     if (existingItem) {
       existingItem.quantity += quantity;
       this.logger.log(
@@ -80,6 +118,9 @@ export class CartService {
     const cartItem = await this.cartItemRepo.findOne({
       where: { cartId: cart.id, variantId },
     });
+    const targetQuantity = (cartItem?.quantity || 0) + quantity;
+
+    await this.validateStock(variantId, targetQuantity);
 
     if (cartItem) {
       cartItem.quantity += quantity;
@@ -97,7 +138,6 @@ export class CartService {
     return this.getUserCart(userId);
   }
 
-  // ۳. مرج سبد مهمان و کاربر
   async mergeGuestCart(userId: number, guestCartId: string) {
     const lockKey = `lock:cart:merge:${guestCartId}`;
     this.logger.log(
@@ -178,62 +218,107 @@ export class CartService {
       return this.getUserCart(userId);
     });
   }
-
-  // ۴. مشاهده سبد مهمان
   async getGuestCart(cartId: string) {
     this.logger.log(`[getGuestCart] 👀 دریافت سبد مهمان | cartId: ${cartId}`);
     const redisKey = `cart:guest:${cartId}`;
     const guestItems: GuestCartItem[] =
       (await this.redisService.get(redisKey)) || [];
 
-    if (guestItems.length === 0) {
-      this.logger.debug(`[getGuestCart] سبد مهمان در ردیس خالی است.`);
-      return { items: [] };
+    if (!guestItems.length) {
+      return {
+        id: cartId,
+        items: [],
+        summary: CartUtils.calculateSummary([]),
+        messages: [],
+      };
     }
 
-    const variantIds = guestItems.map((item) => item.variantId);
-    this.logger.debug(
-      `[getGuestCart] واکشی اطلاعات واریانت‌ها از دیتابیس | IDs: ${variantIds.join(', ')}`,
-    );
-
-    const variantRepo = this.dataSource.getRepository(ProductVariant);
-    const variants = await variantRepo.find({
-      where: { id: In(variantIds) },
-      relations: ['product'],
+    const variants = await this.dataSource.getRepository(ProductVariant).find({
+      where: { id: In(guestItems.map((i) => i.variantId)) },
+      relations: ['product', 'product.images'],
     });
+    const variantMap = new Map(variants.map((v) => [v.id, v]));
 
-    this.logger.debug(
-      `[getGuestCart] تعداد ${variants.length} واریانت از دیتابیس پیدا شد.`,
-    );
+    // آماده‌سازی اولیه برای سنجش استاک
+    const itemsToCheck = guestItems.map((item) => ({
+      id: `guest-item-${item.variantId}`,
+      cartId,
+      variantId: item.variantId,
+      quantity: item.quantity,
+      variant: variantMap.get(item.variantId) || null,
+    }));
 
-    const items = guestItems.map((item) => {
-      const variantDetails = variants.find((v) => v.id === item.variantId);
-      return {
-        id: `guest-item-${item.variantId}`,
-        cartId,
-        variantId: item.variantId,
-        quantity: item.quantity,
-        variant: variantDetails || null,
-      };
-    });
+    // 🌟 تمام کثیف‌کاری‌ها در یک خط!
+    const { validItems, messages, hasChanges } =
+      CartUtils.reconcileCartItems(itemsToCheck);
 
-    return { id: cartId, items };
+    // سینک ردیس در صورت نیاز
+    if (hasChanges) {
+      const updated = validItems.map((i) => ({
+        variantId: i.variantId,
+        quantity: i.quantity,
+      }));
+      if (updated.length > 0) {
+        await this.redisService.set(redisKey, updated, 60 * 60 * 24 * 7);
+      } else {
+        await this.redisService.del(redisKey);
+      }
+    }
+
+    return {
+      id: cartId,
+      items: validItems.map((item) =>
+        formatCartItem(item.id, item.quantity, item.variant!),
+      ),
+      summary: CartUtils.calculateSummary(validItems),
+      messages,
+    };
   }
-
   async getUserCart(userId: number) {
     this.logger.log(
-      `[getUserCart] 👤 واکشی سبد خرید کاربر از دیتابیس | userId: ${userId}`,
+      `[getUserCart] 👤 واکشی سبد خرید کاربر | userId: ${userId}`,
     );
+
     const cart = await this.cartRepo.findOne({
       where: { userId },
-      relations: ['items', 'items.variant'],
+      relations: [
+        'items',
+        'items.variant',
+        'items.variant.product',
+        'items.variant.product.images',
+      ],
     });
 
-    this.logger.debug(
-      `[getUserCart] نتیجه کوئری: ${cart ? `یافت شد (تعداد آیتم‌ها: ${cart.items?.length || 0})` : 'سبدی یافت نشد'}`,
-    );
-    return cart;
-  } // ۵. به‌روزرسانی تعداد آیتم برای مهمان (Redis)
+    if (!cart?.items?.length) {
+      return {
+        id: cart?.id,
+        items: [],
+        summary: CartUtils.calculateSummary([]),
+        messages: [],
+      };
+    }
+
+    // 🌟 همون جادو، برای دیتابیس!
+    const { validItems, itemsToUpdate, itemsToDelete, messages } =
+      CartUtils.reconcileCartItems(cart.items);
+
+    // اعمال تغییرات در دیتابیس
+    if (itemsToDelete.length) {
+      await this.cartItemRepo.delete(itemsToDelete.map((i) => i.id));
+    }
+    if (itemsToUpdate.length) {
+      await this.cartItemRepo.save(itemsToUpdate);
+    }
+    return {
+      id: cart.id,
+      items: validItems.map((item) =>
+        formatCartItem(item.id, item.quantity, item.variant),
+      ),
+      summary: CartUtils.calculateSummary(validItems),
+      messages,
+    };
+  }
+
   async updateGuestCartItem(
     cartId: string,
     variantId: string,
@@ -242,7 +327,7 @@ export class CartService {
     this.logger.log(
       `[updateGuestCartItem] 🔄 تغییر تعداد آیتم مهمان | cartId: ${cartId}, variantId: ${variantId}, newQuantity: ${quantity}`,
     );
-
+    await this.validateStock(variantId, quantity);
     const redisKey = `cart:guest:${cartId}`;
     const cart: GuestCartItem[] = (await this.redisService.get(redisKey)) || [];
 
@@ -254,7 +339,6 @@ export class CartService {
       throw new NotFoundException('این کالا در سبد خرید یافت نشد.');
     }
 
-    // 🔒 تنها فیلدی که مقدار می‌گیرد:
     item.quantity = quantity;
 
     await this.redisService.set(redisKey, cart, 60 * 60 * 24 * 7);
@@ -265,7 +349,6 @@ export class CartService {
     return this.getGuestCart(cartId);
   }
 
-  // ۶. به‌روزرسانی تعداد آیتم برای کاربر لاگین‌شده (Database)
   async updateUserCartItem(
     userId: number,
     variantId: string,
@@ -274,7 +357,7 @@ export class CartService {
     this.logger.log(
       `[updateUserCartItem] 👤 تغییر تعداد آیتم کاربر | userId: ${userId}, variantId: ${variantId}, newQuantity: ${quantity}`,
     );
-
+    await this.validateStock(variantId, quantity);
     const cart = await this.cartRepo.findOne({
       where: { userId },
     });
@@ -297,13 +380,80 @@ export class CartService {
       throw new NotFoundException('این کالا در سبد خرید شما وجود ندارد.');
     }
 
-    // 🔒 فقط فیلد quantity تغییر می‌کند و بقیه اطلاعات دست‌نخورده باقی می‌مانند:
     cartItem.quantity = quantity;
     await this.cartItemRepo.save(cartItem);
 
     this.logger.log(
       `[updateUserCartItem] ✏️ تعداد آیتم در دیتابیس به ${quantity} به‌روزرسانی شد.`,
     );
+    return this.getUserCart(userId);
+  }
+  async removeGuestCartItem(cartId: string, variantId: string) {
+    this.logger.log(
+      `[removeGuestCartItem] 🗑️ حذف کالا از سبد مهمان | cartId: ${cartId}, variantId: ${variantId}`,
+    );
+
+    const redisKey = `cart:guest:${cartId}`;
+    const cart: GuestCartItem[] = (await this.redisService.get(redisKey)) || [];
+
+    const itemIndex = cart.findIndex((i) => i.variantId === variantId);
+    if (itemIndex === -1) {
+      this.logger.warn(
+        `[removeGuestCartItem] ⚠️ آیتم ${variantId} در سبد مهمان پیدا نشد.`,
+      );
+      throw new NotFoundException('این کالا در سبد خرید یافت نشد.');
+    }
+
+    cart.splice(itemIndex, 1);
+
+    if (cart.length === 0) {
+      await this.redisService.del(redisKey);
+      this.logger.log(
+        `[removeGuestCartItem] 🧹 سبد مهمان خالی شد و کلید ردیس حذف گردید.`,
+      );
+    } else {
+      await this.redisService.set(redisKey, cart, 60 * 60 * 24 * 7);
+      this.logger.log(
+        `[removeGuestCartItem] 💾 کالا حذف شد؛ تعداد آیتم‌های باقی‌مانده: ${cart.length}`,
+      );
+    }
+
+    return this.getGuestCart(cartId);
+  }
+
+  // ۸. حذف آیتم از سبد کاربر لاگین‌شده (Database)
+  async removeUserCartItem(userId: number, variantId: string) {
+    this.logger.log(
+      `[removeUserCartItem] 🗑️ حذف کالا از سبد کاربر | userId: ${userId}, variantId: ${variantId}`,
+    );
+
+    const cart = await this.cartRepo.findOne({
+      where: { userId },
+    });
+
+    if (!cart) {
+      this.logger.warn(
+        `[removeUserCartItem] ⚠️ سبدی برای کاربر ${userId} یافت نشد.`,
+      );
+      throw new NotFoundException('سبد خریدی برای شما یافت نشد.');
+    }
+
+    const cartItem = await this.cartItemRepo.findOne({
+      where: { cartId: cart.id, variantId },
+    });
+
+    if (!cartItem) {
+      this.logger.warn(
+        `[removeUserCartItem] ⚠️ آیتم ${variantId} در سبد کاربر یافت نشد.`,
+      );
+      throw new NotFoundException('این کالا در سبد خرید شما وجود ندارد.');
+    }
+
+    await this.cartItemRepo.remove(cartItem);
+    this.logger.log(
+      `[removeUserCartItem] ✅ آیتم ${variantId} با موفقیت از دیتابیس حذف شد.`,
+    );
+
     return this.getUserCart(userId);
   }
 }

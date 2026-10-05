@@ -1,23 +1,33 @@
-/**
- * تبدیل تمام ارقام فارسی و عربی به ارقام استاندارد انگلیسی
- */
-export function convertToEnglishDigits(input?: string): string {
-  if (!input) return '';
+const DIGIT_MAP: Record<string, string> = {
+  '۰': '0',
+  '۱': '1',
+  '۲': '2',
+  '۳': '3',
+  '۴': '4',
+  '۵': '5',
+  '۶': '6',
+  '۷': '7',
+  '۸': '8',
+  '۹': '9',
 
-  const persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
-  const arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+  '٠': '0',
+  '١': '1',
+  '٢': '2',
+  '٣': '3',
+  '٤': '4',
+  '٥': '5',
+  '٦': '6',
+  '٧': '7',
+  '٨': '8',
+  '٩': '9',
+};
 
-  return input
-    .split('')
-    .map((char) => {
-      const pIndex = persianDigits.indexOf(char);
-      if (pIndex > -1) return pIndex.toString();
+export function convertToEnglishDigits(
+  input?: string | null,
+): string | undefined {
+  if (input === undefined || input === null) {
+    return undefined;
+  }
 
-      const aIndex = arabicDigits.indexOf(char);
-      if (aIndex > -1) return aIndex.toString();
-
-      return char;
-    })
-    .join('')
-    .trim();
+  return input.replace(/[۰-۹٠-٩]/g, (digit) => DIGIT_MAP[digit]).trim();
 }
