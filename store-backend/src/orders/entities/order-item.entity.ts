@@ -50,9 +50,12 @@ export class OrderItem {
 
   @Column({
     type: 'bigint',
-    precision: 10,
-    scale: 0,
     transformer: new ColumnNumericTransformer(),
   })
   unitPrice: number;
+  @Column({
+    type: 'bigint',
+    transformer: new ColumnNumericTransformer(),
+  })
+  lineTotal: number;
 }

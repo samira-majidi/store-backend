@@ -1,0 +1,21 @@
+# @import ../../auth/http/verify-otp.http
+
+@baseUrl = http://localhost:8080
+
+### ثبت سفارش از روی سبد خرید
+# @ref login
+POST {{baseUrl}}/orders/checkout
+Content-Type: application/json
+Authorization: Bearer {{login.accessToken}}
+
+{
+  "name": "سمیرا",
+  "lastName": "مجیدی",
+  "mobile": "09121234567",
+  "province": "تهران",
+  "city": "تهران",
+  "fullAddress": "تهران، خیابان ولیعصر، پلاک ۱۲",
+  "postalCode": "1234567890",
+  "shippingMethod": "POST_PISHTAZ",
+  "notes": "لطفاً قبل از ارسال با من تماس بگیرید."
+}

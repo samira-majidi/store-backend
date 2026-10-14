@@ -8,8 +8,8 @@ import {
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { ShippingMethod } from '../enums/order.enum';
-import { convertToEnglishDigits } from '#src/common/utils/persian-number-converter';
 import { trimString } from '../utils/trim.util';
+import { convertDigits } from '../utils/convert-digits.util';
 
 export class CreateOrderDto {
   @Transform(trimString)
@@ -24,7 +24,7 @@ export class CreateOrderDto {
   @MaxLength(100)
   lastName: string;
 
-  @Transform(({ value }) => convertToEnglishDigits(value))
+  @Transform(convertDigits)
   @IsString()
   @Matches(/^09[0-9]{9}$/, { message: 'شماره موبایل گیرنده معتبر نیست' })
   mobile: string;
@@ -47,7 +47,7 @@ export class CreateOrderDto {
   @MaxLength(1000)
   fullAddress: string;
 
-  @Transform(({ value }) => convertToEnglishDigits(value))
+  @Transform(convertDigits)
   @IsString()
   @Matches(/^\d{10}$/, { message: 'کد پستی باید ۱۰ رقم باشد' })
   postalCode: string;

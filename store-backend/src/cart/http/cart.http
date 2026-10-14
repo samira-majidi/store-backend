@@ -22,7 +22,7 @@ Content-Type: application/json
 {
   "cartId": "{{guestCartId}}",
   "variantId": "{{variantId}}",
-  "quantity": 8
+  "quantity":
 }
 
 ### ۱.۲. مشاهده سبد خرید مهمان
@@ -37,13 +37,13 @@ GET {{baseUrl}}/cart/guest/{{guestCartId}}
 # @ref login
 POST {{baseUrl}}/cart/user/add
 Content-Type: application/json
-Authorization: GAPGPTMASKTOKENsepadg1yawgX4X {{login.accessToken}}
+Authorization: Bearer {{login.accessToken}}
   
 
 
 {
   "variantId": "{{variantId}}",
-  "quantity": 1
+  "quantity": 2
 }
 
 ### ۲.۲. مشاهده سبد خرید کاربر

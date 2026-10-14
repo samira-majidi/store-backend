@@ -13,6 +13,7 @@ import {
 import { OrderItem } from './order-item.entity';
 import { ShippingMethod, OrderStatus } from '../enums/order.enum';
 import { ColumnNumericTransformer } from '#src/common/utils/numeric.transformer';
+import { Payment } from '#src/payment/entities/payment.entity';
 
 @Entity('orders')
 @Index(['userId', 'createdAt'])
@@ -53,16 +54,12 @@ export class Order {
   // --- مبالغ و وضعیت ---
   @Column({
     type: 'bigint',
-    precision: 12,
-    scale: 0,
     transformer: new ColumnNumericTransformer(),
   })
   totalAmount: number;
 
   @Column({
     type: 'bigint',
-    precision: 10,
-    scale: 0,
     default: 0,
     transformer: new ColumnNumericTransformer(),
   })
@@ -70,8 +67,6 @@ export class Order {
 
   @Column({
     type: 'bigint',
-    precision: 12,
-    scale: 0,
     transformer: new ColumnNumericTransformer(),
   })
   finalAmount: number;
@@ -83,13 +78,12 @@ export class Order {
   })
   status: OrderStatus;
 
-  @Index({ unique: true })
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  paymentAuthority?: string | null;
-
   @Index()
   @Column({ type: 'varchar', length: 100, nullable: true })
   trackingCode?: string | null;
+
+  @OneToMany(() => Payment, (payment) => payment.order)
+  payments: Payment[];
 
   @CreateDateColumn() createdAt: Date;
   @UpdateDateColumn() updatedAt: Date;

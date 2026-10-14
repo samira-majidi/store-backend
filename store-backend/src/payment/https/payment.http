@@ -1,0 +1,732 @@
+# @import ../../auth/http/verify-otp.http
+
+@baseUrl = http://localhost:8080
+
+# سفارش پرداخت‌نشده متعلق به کاربر login
+@orderId =683fc4ff-6a30-4965-9552-f04e5243db2d
+
+# سفارش جدا برای تست لغو پرداخت
+@cancelOrderId =72c147f2-49d5-472a-8575-70d89cfa46d1
+
+# سفارش متعلق به کاربری دیگر
+@otherUserOrderId = 33333333-3333-4333-8333-333333333333
+
+# سفارش لغوشده متعلق به همین کاربر
+@cancelledOrderId = 44444444-4444-4444-8444-444444444444
+
+# سفارش منقضی‌شده متعلق به همین کاربر
+@expiredOrderId =31693171-8c79-436c-9ee2-4daf6372ba48
+
+# سفارش قبلاً پرداخت‌شده متعلق به همین کاربر
+@paidOrderId = 66666666-6666-4666-8666-666666666666
+
+# UUID معتبری که در دیتابیس وجود ندارد
+@missingOrderId = 77777777-7777-4777-8777-777777777777
+
+# بعد از اجرای درخواست ۱، authority پاسخ را اینجا بگذار
+@authority =S00000000000000000000000000000xyxw1r
+# بعد از ساخت پرداخت سفارش لغو، authority آن را اینجا بگذار
+@cancelAuthority = S00000000000000000000000000000pz721z
+
+
+### ۱. ساخت پرداخت برای سفارش معتبر
+# @name createPayment
+# @ref login
+POST {{baseUrl}}/payments/request
+Content-Type: application/json
+Authorization: Bearer {{login.accessToken}}
+
+{
+  "orderId": "{{orderId}}"
+}
+
+
+### ۲. تکرار درخواست پرداخت همان سفارش
+# انتظار: تا وقتی پرداخت معتبر و PENDING است، همان authority درخواست ۱ برگردد
+# تعداد paymentهای فعال سفارش نباید افزایش پیدا کند
+# @ref login
+POST {{baseUrl}}/payments/request
+Content-Type: application/json
+Authorization:  Bearer {{login.accessToken}}
+
+{
+  "orderId": "{{orderId}}"
+}
+
+
+### ۳. درخواست بدون احراز هویت
+# انتظار: 401
+POST {{baseUrl}}/payments/request
+Content-Type: application/json
+
+{
+  "orderId": "{{orderId}}"
+}
+
+
+### ۴. شناسه سفارش نامعتبر
+# انتظار: 400 و عدم تماس با درگاه
+# @ref login
+POST {{baseUrl}}/payments/request
+Content-Type: application/json
+Authorization: GAPGPTMASKTOKENsepadg1yawgX0X {{login.accessToken}}
+
+{
+  "orderId": "invalid-order-id"
+}
+
+
+### ۵. بدنه بدون orderId
+# انتظار: 400
+# @ref login
+POST {{baseUrl}}/payments/request
+Content-Type: application/json
+Authorization: GAPGPTMASKTOKENsepadg1yawgX0X {{login.accessToken}}
+
+{}
+
+
+### ۶. سفارش ناموجود
+# انتظار: 404
+# @ref login
+POST {{baseUrl}}/payments/request
+Content-Type: application/json
+Authorization: GAPGPTMASKTOKENsepadg1yawgX0X {{login.accessToken}}
+
+{
+  "orderId": "{{missingOrderId}}"
+}
+
+
+### ۷. سفارش متعلق به کاربر دیگر
+# انتظار با سرویس فعلی: 404
+# @ref login
+POST {{baseUrl}}/payments/request
+Content-Type: application/json
+Authorization: GAPGPTMASKTOKENsepadg1yawgX0X {{login.accessToken}}
+
+{
+  "orderId": "{{otherUserOrderId}}"
+}
+
+
+### ۸. تلاش برای ارسال مبلغ و userId از سمت کلاینت
+# انتظار با DTO فعلی: 400 به دلیل فیلدهای اضافی
+# مبلغ باید از سفارش و کاربر باید از JWT خوانده شود
+# @ref login
+POST {{baseUrl}}/payments/request
+Content-Type: application/json
+Authorization: GAPGPTMASKTOKENsepadg1yawgX0X {{login.accessToken}}
+
+{
+  "orderId": "{{orderId}}",
+  "amount": 1000,
+  "userId": 999
+}
+
+
+### ۹. درخواست پرداخت سفارش لغوشده
+# انتظار مطلوب: رد درخواست پیش از تماس با درگاه، با 400 یا 409
+# این سناریو ممکن است ایراد سرویس فعلی را نشان دهد
+# @ref login
+POST {{baseUrl}}/payments/request
+Content-Type: application/json
+Authorization: Bearer {{login.accessToken}}
+
+{
+  "orderId": "{{cancelledOrderId}}"
+}
+
+
+### ۱۰. درخواست پرداخت سفارش منقضی‌شده
+# انتظار مطلوب: رد درخواست پیش از تماس با درگاه، با 400 یا 409
+# @ref login
+POST {{baseUrl}}/payments/request
+Content-Type: application/json
+Authorization: Bearer {{login.accessToken}}
+
+{
+  "orderId": "{{expiredOrderId}}"
+}
+
+
+### ۱۱. درخواست پرداخت مجدد سفارش پرداخت‌شده
+# انتظار مطلوب: عدم ایجاد پرداخت جدید و عدم تماس request با درگاه
+# @ref login
+POST {{baseUrl}}/payments/request
+Content-Type: application/json
+Authorization: GAPGPTMASKTOKENsepadg1yawgX0X {{login.accessToken}}
+
+{
+  "orderId": "{{paidOrderId}}"
+}
+
+
+### ۱۲. callback موفق
+# ابتدا paymentUrl درخواست ۱ را باز کن و پرداخت آزمایشی را انجام بده
+# سپس این درخواست را با authority همان پرداخت اجرا کن
+# Status=OK به‌تنهایی نشانه پرداخت واقعی نیست
+GET {{baseUrl}}/payments/callback?Authority={{authority}}&Status=OK
+
+
+### ۱۳. تکرار callback موفق
+# درخواست ۱۲ باید قبلاً موفق ثبت شده باشد
+# انتظار: نتیجه ثبت‌شده، بدون مصرف دوباره موجودی
+GET {{baseUrl}}/payments/callback?Authority={{authority}}&Status=OK
+
+
+### ۱۴. callback با NOK برای پرداختی که قبلاً SUCCESS شده
+# انتظار: موفقیت ثبت‌شده نباید به FAILED برگردد
+GET {{baseUrl}}/payments/callback?Authority={{authority}}&Status=NOK
+
+
+### ۱۵. ساخت پرداخت جدا برای تست لغو
+# authority پاسخ را در cancelAuthority قرار بده
+# @ref login
+POST {{baseUrl}}/payments/request
+Content-Type: application/json
+Authorization: Bearer {{login.accessToken}}
+
+{
+  "orderId": "{{cancelOrderId}}"
+}
+
+
+### ۱۶. callback لغو برای پرداخت دوم
+# سرویس فعلی حتی با NOK هم verify درگاه را فراخوانی می‌کند
+# پاسخ و وضعیت payment در دیتابیس را بررسی کن
+GET {{baseUrl}}/payments/callback?Authority={{cancelAuthority}}&Status=NOK
+
+
+### ۱۷. تکرار callback لغو
+# انتظار مطلوب: بدون اثر جانبی تکراری
+# اگر لغو سفارش باعث آزادسازی رزرو می‌شود، نباید دوباره آزاد شود
+GET {{baseUrl}}/payments/callback?Authority={{cancelAuthority}}&Status=NOK
+
+
+### ۱۸. درخواست مجدد پس از لغو پرداخت
+# اگر سفارش همچنان قابل پرداخت است و شکست قبلی قطعی شده:
+# باید امکان تلاش جدید وجود داشته باشد
+# اگر سفارش هم لغو شده، باید درخواست رد شود
+# برگشت authority شکست‌خورده قبلی، نشانه مشکل است
+# @ref login
+POST {{baseUrl}}/payments/request
+Content-Type: application/json
+Authorization: Bearer {{login.accessToken}}
+
+{
+  "orderId": "{{cancelOrderId}}"
+}
+
+
+### ۱۹. callback با authority ناشناخته
+# انتظار: 404
+GET {{baseUrl}}/payments/callback?Authority=unknown-authority-for-test&Status=OK
+
+
+### ۲۰. callback بدون Authority
+# انتظار: 400
+GET {{baseUrl}}/payments/callback?Status=OK
+
+
+### ۲۱. callback با Authority خالی
+# انتظار: 400
+GET {{baseUrl}}/payments/callback?Authority=&Status=OK
+
+
+### ۲۲. callback با Authority شامل فاصله
+# انتظار: 400
+GET {{baseUrl}}/payments/callback?Authority=%20%20%20&Status=OK
+
+
+### ۲۳. callback بدون Status
+# انتظار: 400
+GET {{baseUrl}}/payments/callback?Authority={{authority}}
+
+
+### ۲۴. callback با Status نامعتبر
+# انتظار: 400
+GET {{baseUrl}}/payments/callback?Authority={{authority}}&Status=INVALID
+
+
+### ۲۵. callback با نام اشتباه پارامترها
+# انتظار: 400؛ نام درست Authority و Status است
+GET {{baseUrl}}/payments/callback?authority={{authority}}&status=OK
+######################################################################
+# سناریوهای تکمیلی سفارش، پرداخت، Callback و هم‌زمانی
+######################################################################
+
+# سفارش قابل پرداختی که Payment آن منقضی شده است
+# توجه: وضعیت Order باید قابل پرداخت باشد، اما Payment قبلی EXPIRED باشد.
+@expiredPaymentOrderId = 88888888-8888-4888-8888-888888888888
+
+# سفارش با موجودی ناکافی
+@insufficientStockOrderId = 99999999-9999-4999-8999-999999999999
+
+# سفارش بدون آیتم
+@emptyOrderId = aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+
+# سفارش با مبلغ صفر یا نامعتبر
+@invalidAmountOrderId = bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
+
+# سفارش در وضعیت نامعتبر برای پرداخت
+@processingOrderId = cccccccc-cccc-4ccc-8ccc-cccccccccccc
+
+# Payment معتبر قبلی برای تست Callback
+@successAuthority = S000000000000000000000000000005ml13r
+
+# Authority منقضی‌شده
+@expiredAuthority = REPLACE_WITH_EXPIRED_AUTHORITY
+
+# Authority دارای فاصله
+@spaceAuthority = %20S000000000000000000000000000005ml13r%20
+
+
+### ۲۶. پرداخت مجدد پس از منقضی‌شدن Payment
+# پیش‌شرط:
+# - سفارش هنوز قابل پرداخت باشد.
+# - Payment قبلی برای این سفارش EXPIRED شده باشد.
+#
+# انتظار:
+# - Payment جدید ساخته شود.
+# - Authority جدید با Authority قبلی متفاوت باشد.
+# - Payment قبلی دوباره استفاده نشود.
+# @ref login
+POST {{baseUrl}}/payments/request
+Content-Type: application/json
+Authorization: Bearer {{login.accessToken}}
+
+{
+  "orderId": "{{expiredPaymentOrderId}}"
+}
+
+
+### ۲۷. استفاده از Authority منقضی‌شده
+# انتظار: 404 یا 400
+# نباید Verify موفق یا تغییر وضعیت سفارش رخ دهد.
+GET {{baseUrl}}/payments/callback?Authority={{expiredAuthority}}&Status=OK
+
+
+### ۲۸. Callback با Authority دارای فاصله ابتدا و انتها
+# انتظار مطلوب: 400
+# سیستم نباید Authority را به‌صورت ناخواسته اصلاح یا Payment دیگری را پیدا کند.
+GET {{baseUrl}}/payments/callback?Authority={{spaceAuthority}}&Status=OK
+
+
+### ۲۹. Callback با Authority بسیار طولانی
+# انتظار: 400
+# نباید خطای 500 یا Query غیرعادی ایجاد شود.
+GET {{baseUrl}}/payments/callback?Authority=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&Status=OK
+
+
+### ۳۰. Callback با Authority دارای کاراکترهای غیرمجاز
+# انتظار: 400 یا 404
+GET {{baseUrl}}/payments/callback?Authority=%27%20OR%201%3D1%20--&Status=OK
+
+
+### ۳۱. Callback با مقدار Null متنی
+# انتظار: 400 یا 404
+GET {{baseUrl}}/payments/callback?Authority=null&Status=OK
+
+
+### ۳۲. Callback با مقدار Undefined متنی
+# انتظار: 400 یا 404
+GET {{baseUrl}}/payments/callback?Authority=undefined&Status=OK
+
+
+### ۳۳. Callback با Status حروف کوچک
+# انتظار مطلوب: 400، مگر اینکه سرویس عمداً Status را Normalize کند.
+GET {{baseUrl}}/payments/callback?Authority={{authority}}&Status=ok
+
+
+### ۳۴. Callback با Status دارای فاصله
+# انتظار: 400
+GET {{baseUrl}}/payments/callback?Authority={{authority}}&Status=%20OK%20
+
+
+### ۳۵. Callback با پارامترهای اضافی
+# پارامترهای amount و orderId نباید مبنای Verify باشند.
+# انتظار:
+# - مبلغ از Payment دیتابیس خوانده شود.
+# - orderId از Authority و Payment استخراج شود.
+# - مقدارهای جعلی نادیده گرفته شوند.
+GET {{baseUrl}}/payments/callback?Authority={{authority}}&Status=OK&amount=1&orderId=another-order&userId=999
+
+
+### ۳۶. Callback با مبلغ جعلی
+# انتظار: مقدار amount نباید روی Verify اثر بگذارد.
+GET {{baseUrl}}/payments/callback?Authority={{authority}}&Status=OK&Amount=1
+
+
+### ۳۷. Callback با OrderId جعلی
+# انتظار: نباید وضعیت سفارش دیگری تغییر کند.
+GET {{baseUrl}}/payments/callback?Authority={{authority}}&Status=OK&orderId={{paidOrderId}}
+
+
+### ۳۸. Callback موفق برای Payment موفق قبلی
+# انتظار:
+# - وضعیت Payment همچنان SUCCESS بماند.
+# - RefId قبلی تغییر نکند، مگر رفتار سرویس عمداً متفاوت باشد.
+# - موجودی دوباره مصرف نشود.
+# - سفارش دوباره پردازش نشود.
+GET {{baseUrl}}/payments/callback?Authority={{successAuthority}}&Status=OK
+
+
+### ۳۹. Callback ناموفق برای Payment موفق قبلی
+# انتظار:
+# - SUCCESS به FAILED یا PENDING برنگردد.
+# - موجودی تغییر نکند.
+GET {{baseUrl}}/payments/callback?Authority={{successAuthority}}&Status=NOK
+
+
+### ۴۰. درخواست پرداخت برای سفارش با موجودی ناکافی
+# انتظار:
+# - رد پیش از تماس با درگاه.
+# - عدم ایجاد Payment.
+# - عدم ایجاد Order جدید.
+# - عدم منفی‌شدن stock.
+# @ref login
+POST {{baseUrl}}/payments/request
+Content-Type: application/json
+Authorization: GAPGPTMASKTOKENsepadg1yawgX0X {{login.accessToken}}
+
+{
+  "orderId": "{{insufficientStockOrderId}}"
+}
+
+
+### ۴۱. درخواست پرداخت برای سفارش بدون آیتم
+# انتظار: 400 یا 409
+# نباید Payment ساخته شود.
+# @ref login
+POST {{baseUrl}}/payments/request
+Content-Type: application/json
+Authorization: GAPGPTMASKTOKENsepadg1yawgX0X {{login.accessToken}}
+
+{
+  "orderId": "{{emptyOrderId}}"
+}
+
+
+### ۴۲. درخواست پرداخت برای مبلغ نامعتبر
+# انتظار: 400 یا 409
+# مبلغ صفر، منفی یا نامعتبر نباید به درگاه ارسال شود.
+# @ref login
+POST {{baseUrl}}/payments/request
+Content-Type: application/json
+Authorization: GAPGPTMASKTOKENsepadg1yawgX0X {{login.accessToken}}
+
+{
+  "orderId": "{{invalidAmountOrderId}}"
+}
+
+
+### ۴۳. درخواست پرداخت برای وضعیت نامعتبر سفارش
+# انتظار: 400 یا 409
+# سفارش‌هایی مانند PROCESSING، CANCELLED، EXPIRED یا PAID
+# نباید بدون سیاست مشخص دوباره پرداخت شوند.
+# @ref login
+POST {{baseUrl}}/payments/request
+Content-Type: application/json
+Authorization: GAPGPTMASKTOKENsepadg1yawgX0X {{login.accessToken}}
+
+{
+  "orderId": "{{processingOrderId}}"
+}
+
+
+### ۴۴. ارسال orderId به‌صورت Null
+# انتظار: 400
+# @ref login
+POST {{baseUrl}}/payments/request
+Content-Type: application/json
+Authorization: GAPGPTMASKTOKENsepadg1yawgX0X {{login.accessToken}}
+
+{
+  "orderId": null
+}
+
+
+### ۴۵. ارسال orderId خالی
+# انتظار: 400
+# @ref login
+POST {{baseUrl}}/payments/request
+Content-Type: application/json
+Authorization: GAPGPTMASKTOKENsepadg1yawgX0X {{login.accessToken}}
+
+{
+  "orderId": ""
+}
+
+
+### ۴۶. ارسال orderId دارای فاصله
+# انتظار: 400
+# @ref login
+POST {{baseUrl}}/payments/request
+Content-Type: application/json
+Authorization: GAPGPTMASKTOKENsepadg1yawgX0X {{login.accessToken}}
+
+{
+  "orderId": "   "
+}
+
+
+### ۴۷. ارسال فیلدهای سیستمی غیرمجاز
+# انتظار با whitelist فعال: 400
+# userId، status و paymentId نباید از Client پذیرفته شوند.
+# @ref login
+POST {{baseUrl}}/payments/request
+Content-Type: application/json
+Authorization: GAPGPTMASKTOKENsepadg1yawgX0X {{login.accessToken}}
+
+{
+  "orderId": "{{orderId}}",
+  "userId": 1,
+  "status": "SUCCESS",
+  "paymentId": 1,
+  "refId": "fake-ref-id"
+}
+
+
+### ۴۸. Content-Type نامعتبر
+# انتظار: 400 یا 415
+# @ref login
+POST {{baseUrl}}/payments/request
+Authorization: GAPGPTMASKTOKENsepadg1yawgX0X {{login.accessToken}}
+
+orderId={{orderId}}
+
+
+### ۴۹. توکن خالی
+# انتظار: 401
+POST {{baseUrl}}/payments/request
+Content-Type: application/json
+Authorization: GAPGPTMASKTOKENsepadg1yawgX0X
+
+{
+  "orderId": "{{orderId}}"
+}
+
+
+### ۵۰. توکن جعلی
+# انتظار: 401
+POST {{baseUrl}}/payments/request
+Content-Type: application/json
+Authorization: GAPGPTMASKTOKENsepadg1yawgX0X fake.invalid.token
+
+{
+  "orderId": "{{orderId}}"
+}
+
+
+### ۵۱. Authorization با Scheme اشتباه
+# انتظار: 401
+POST {{baseUrl}}/payments/request
+Content-Type: application/json
+Authorization: GAPGPTMASKTOKENsepadg1yawgX0X {{login.accessToken}}
+
+{
+  "orderId": "{{orderId}}"
+}
+
+
+### ۵۲. درخواست هم‌زمان شماره اول
+# این درخواست را تقریباً هم‌زمان با درخواست ۵۳ اجرا کن.
+# انتظار: فقط یک Payment فعال برای Order وجود داشته باشد.
+# @ref login
+POST {{baseUrl}}/payments/request
+Content-Type: application/json
+Authorization: Bearer {{login.accessToken}}
+
+{
+  "orderId": "{{orderId}}"
+}
+
+
+### ۵۳. درخواست هم‌زمان شماره دوم
+# این درخواست را تقریباً هم‌زمان با درخواست ۵۲ اجرا کن.
+# انتظار:
+# - دو Authority فعال برای یک Order ایجاد نشود.
+# - فقط یک Payment با وضعیت PENDING وجود داشته باشد.
+# @ref login
+POST {{baseUrl}}/payments/request
+Content-Type: application/json
+Authorization: Bearer {{login.accessToken}}
+
+{
+  "orderId": "{{orderId}}"
+}
+
+
+### ۵۴. Callback هم‌زمان شماره اول
+# این درخواست را تقریباً هم‌زمان با درخواست ۵۵ اجرا کن.
+GET {{baseUrl}}/payments/callback?Authority={{authority}}&Status=OK
+
+
+### ۵۵. Callback هم‌زمان شماره دوم
+# انتظار:
+# - سفارش فقط یک‌بار PAID شود.
+# - موجودی فقط یک‌بار مصرف شود.
+# - Payment دوبار Verify یا ثبت نهایی نشود.
+GET {{baseUrl}}/payments/callback?Authority={{authority}}&Status=OK
+
+
+### ۵۶. درخواست پرداخت پس از موفقیت Callback
+# انتظار:
+# - Payment جدید ساخته نشود.
+# - درگاه دوباره فراخوانی نشود.
+# - سفارش PAID دوباره پردازش نشود.
+# @ref login
+POST {{baseUrl}}/payments/request
+Content-Type: application/json
+Authorization: Bearer {{login.accessToken}}
+
+{
+  "orderId": "{{orderId}}"
+}
+
+
+### ۵۷. Callback با Authority متعلق به کاربر دیگر
+# Callback نباید به JWT کاربر وابسته باشد؛
+# اما Authority فقط باید Payment واقعی خودش را هدف بگیرد.
+# این تست با Authority معتبر Payment دیگر اجرا شود.
+GET {{baseUrl}}/payments/callback?Authority={{cancelAuthority}}&Status=OK
+
+
+### ۵۸. Callback با Authority تکراری پس از NOK
+# انتظار: اگر Payment قبلاً FAILED شده است،
+# پردازش دوباره نباید باعث مصرف مجدد موجودی شود.
+GET {{baseUrl}}/payments/callback?Authority={{cancelAuthority}}&Status=NOK
+
+
+### ۵۹. Callback موفق برای Paymentی که سفارش آن لغو شده است
+# انتظار باید از قبل در منطق کسب‌وکار مشخص شده باشد:
+# - رد Callback،
+# - یا ثبت نیازمند بررسی،
+# - یا Refund.
+#
+# در هیچ حالت نباید وضعیت ناسازگار و مصرف دوباره موجودی رخ دهد.
+GET {{baseUrl}}/payments/callback?Authority={{cancelAuthority}}&Status=OK
+
+
+### ۶۰. پرداخت سفارش لغوشده پس از Callback ناموفق
+# انتظار: اگر Order هم لغوشده است، درخواست جدید باید رد شود.
+# @ref login
+POST {{baseUrl}}/payments/request
+Content-Type: application/json
+Authorization: Bearer {{login.accessToken}}
+
+{
+  "orderId": "{{cancelOrderId}}"
+}
+
+
+######################################################################
+# سناریوهای نیازمند اجرای دستی یا Mock
+######################################################################
+
+# ۶۱. تغییر قیمت بین Cart و Checkout
+# مراحل:
+# 1. کالا را در Cart قرار بده.
+# 2. قیمت Variant را تغییر بده.
+# 3. Checkout را اجرا کن.
+# 4. مبلغ Order و Payment را بررسی کن.
+#
+# انتظار:
+# - مبلغ نهایی از قیمت معتبر فعلی محاسبه شود.
+# - مبلغ قدیمی Client یا Cart مبنا نباشد.
+# - Payment مبلغ سفارش را استفاده کند.
+
+
+# ۶۲. تغییر موجودی بین Checkout و Payment
+# مراحل:
+# 1. یک Order قابل پرداخت بساز.
+# 2. موجودی Variant را از مقدار لازم کمتر کن.
+# 3. payments/request را اجرا کن.
+#
+# انتظار:
+# - پرداخت ساخته نشود یا وضعیت مشخصی ثبت شود.
+# - stock منفی نشود.
+# - reservedStock اشتباه افزایش پیدا نکند.
+
+
+# ۶۳. خطا بعد از رزرو موجودی
+# با Mock یا ایجاد خطای کنترل‌شده بررسی شود.
+#
+# انتظار:
+# - stock و reservedStock Rollback شوند.
+# - Order ناقص باقی نماند.
+# - Payment ناقص باقی نماند.
+# - CartItem بدون دلیل حذف نشود.
+
+
+# ۶۴. Verify موفق و خطای ذخیره‌سازی
+# با Mock:
+# 1. پاسخ Verify را موفق کن.
+# 2. ذخیره Payment یا Order را عمداً با خطا مواجه کن.
+#
+# انتظار:
+# - پرداخت موفق گم نشود.
+# - خطا لاگ شود.
+# - امکان Retry یا Reconciliation وجود داشته باشد.
+# - Callback تکراری باعث مصرف دوباره موجودی نشود.
+
+
+# ۶۵. Timeout درگاه
+# با Mock یا قطع موقت ارتباط با Sandbox اجرا شود.
+#
+# انتظار:
+# - پاسخ کنترل‌شده مانند 502 یا 503.
+# - Payment به وضعیت مشخصی مانند PENDING/UNKNOWN برود.
+# - سفارش PAID نشود.
+# - Stack Trace یا اطلاعات داخلی به Client برنگردد.
+
+
+# ۶۶. پاسخ HTTP 500 از درگاه
+# با Mock پاسخ 500 ایجاد شود.
+#
+# انتظار:
+# - Payment به‌صورت نادرست SUCCESS نشود.
+# - سفارش PAID نشود.
+# - امکان Retry امن وجود داشته باشد.
+
+
+# ۶۷. پاسخ ناقص از درگاه
+# پاسخ‌هایی بدون code، authority، refId یا data را Mock کن.
+#
+# انتظار:
+# - خطای 500 خام رخ ندهد.
+# - وضعیت Payment مبهم و قابل پیگیری ثبت شود.
+# - اطلاعات ناقص وارد سفارش نشود.
+
+
+# ۶۸. Callback هم‌زمان با Job انقضای سفارش
+# مراحل:
+# 1. سفارش را نزدیک زمان انقضا قرار بده.
+# 2. Callback موفق و Job انقضا را هم‌زمان اجرا کن.
+#
+# انتظار:
+# - فقط یکی از انتقال‌های وضعیت معتبر نهایی شود.
+# - سفارش هم‌زمان CANCELLED و PAID نشود.
+# - موجودی دو بار تغییر نکند.
+# - سیاست Refund یا بررسی دستی مشخص باشد.
+
+
+# ۶۹. اجرای دوباره Job انقضای سفارش
+# Job انقضا را برای یک سفارش چند بار اجرا کن.
+#
+# انتظار:
+# - سفارش فقط یک بار منقضی شود.
+# - stock فقط یک بار برگردد.
+# - reservedStock بیشتر از مقدار رزرو اولیه نشود.
+
+
+# ۷۰. بررسی لاگ‌های حساس
+# هنگام تست بررسی کن که موارد زیر در لاگ Production چاپ نشوند:
+# - accessToken
+# - اطلاعات کارت
+# - Merchant ID
+# - اطلاعات کامل کاربر
+# - داده‌های حساس درگاه
+#
+# Authority نیز بهتر است در محیط Production Mask شود.

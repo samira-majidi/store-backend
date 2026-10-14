@@ -47,6 +47,9 @@ export class ProductVariant {
   @Column({ type: 'int', default: 0 })
   stock: number;
 
+  @Column({ type: 'int', default: 0 })
+  reservedStock: number;
+
   @Column({ type: 'varchar', length: 50, nullable: true })
   color: string;
 

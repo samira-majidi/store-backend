@@ -20,6 +20,9 @@ import { CategoriesModule } from './categories/categories.module';
 import { UploadModule } from './common/upload/upload.module';
 import { ProductsModule } from './product/products.module';
 import { CartModule } from './cart/cart.module';
+import { BullModule } from '@nestjs/bullmq';
+import { PaymentModule } from './payment/payment.module';
+import { OrdersModule } from './orders/orders.module';
 
 @Module({
   imports: [
@@ -47,6 +50,17 @@ import { CartModule } from './cart/cart.module';
         database: configService.get('database.name'),
       }),
     }),
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        connection: {
+          host: configService.get<string>('redis.host'),
+          port: Number(configService.get<number>('redis.port')),
+          password: configService.get<string>('redis.password'),
+        },
+      }),
+    }),
     ConfigModule.forFeature(jwtConfig),
     JwtModule.registerAsync(jwtConfig.asProvider()),
     RedisModule,
@@ -55,6 +69,8 @@ import { CartModule } from './cart/cart.module';
     UploadModule,
     ProductsModule,
     CartModule,
+    OrdersModule,
+    PaymentModule,
   ],
   controllers: [AppController],
   providers: [
