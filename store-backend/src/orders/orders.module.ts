@@ -9,7 +9,7 @@ import { CartEntity } from '../cart/entity/cart.entity';
 import { CartItemEntity } from '../cart/entity/cart-item.entity';
 
 import { ProductVariant } from '#src/product/entity/product-variant.entity';
-import { OrderService } from './order.Service';
+import { OrderService } from './order.service';
 import { OrderController } from './order.controller';
 import { OrderExpirationProcessor } from './processor/order-expiration.processor';
 

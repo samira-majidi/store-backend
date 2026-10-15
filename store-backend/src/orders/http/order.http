@@ -2,6 +2,7 @@
 
 @baseUrl = http://localhost:8080
 
+
 ### ثبت سفارش از روی سبد خرید
 # @ref login
 POST {{baseUrl}}/orders/checkout
@@ -18,4 +19,33 @@ Authorization: Bearer {{login.accessToken}}
   "postalCode": "1234567890",
   "shippingMethod": "POST_PISHTAZ",
   "notes": "لطفاً قبل از ارسال با من تماس بگیرید."
+}
+
+
+### دریافت لیست سفارش‌های کاربر جاری
+# @ref login
+GET {{baseUrl}}/orders/me
+Authorization: Bearer {{login.accessToken}}
+
+
+### دریافت جزئیات یک سفارش متعلق به کاربر جاری
+# @ref login
+GET {{baseUrl}}/orders/me/15d7d7d7-c5c0-4976-bbc8-a41f477db8c2
+Authorization: Bearer {{login.accessToken}}
+
+
+### دریافت همه سفارش‌ها توسط مدیر
+# @ref login
+GET {{baseUrl}}/orders/admin/all
+Authorization: Bearer {{login.accessToken}}
+
+
+### تغییر وضعیت سفارش توسط مدیر
+# @ref login
+PATCH {{baseUrl}}/orders/admin/9c1bfe8b-2984-4618-9410-4e5fb23735aa/status
+Content-Type: application/json
+Authorization: Bearer {{login.accessToken}}
+
+{
+  "status": "CANCELLED"
 }

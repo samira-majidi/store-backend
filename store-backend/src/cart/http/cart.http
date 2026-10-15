@@ -3,8 +3,8 @@
 @baseUrl = http://localhost:8080
 
 # آیدی محصول و واریانت رو بعد از ساخت محصول اینجا قرار بده تا بقیه ریکوئست‌ها راحت کار کنن
-@productId =428e92f9-1dcb-4053-adba-0d98288eb3ac
-@variantId = 3221101c-466a-4397-95e0-bbc087f0cfe5
+@productId =eef57653-5b75-4707-b262-1b7457e1d68d
+@variantId = 6aa6b708-02c2-44bf-a54b-46295ebb8789
 @guestCartId = 11111111-2222-3333-4444-555555555555
 
 # توکن کاربر لاگین‌شده رو اینجا قرار بده
@@ -43,7 +43,7 @@ Authorization: Bearer {{login.accessToken}}
 
 {
   "variantId": "{{variantId}}",
-  "quantity": 2
+  "quantity": 1
 }
 
 ### ۲.۲. مشاهده سبد خرید کاربر
